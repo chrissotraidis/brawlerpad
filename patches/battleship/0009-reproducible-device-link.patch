@@ -1,0 +1,8 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -886,3 +886,4 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+         XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
+     )
++    target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-no_uuid")
+ else()

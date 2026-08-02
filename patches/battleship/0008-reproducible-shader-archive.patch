@@ -1,0 +1,78 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1071,8 +1071,11 @@ if (NOT SSB64_MOBILE)
+     add_custom_command(
+         OUTPUT ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/f3d.o2r
+-        COMMAND ${CMAKE_COMMAND} -E tar cf ${CMAKE_SOURCE_DIR}/f3d.o2r --format=zip shaders
+-        DEPENDS ${SSB64_F3D_SHADER_FILES}
+-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libultraship/src/fast
++        COMMAND ${Python3_EXECUTABLE}
++            ${CMAKE_SOURCE_DIR}/tools/package_shader_archive.py
++            ${CMAKE_SOURCE_DIR}/libultraship/src/fast/shaders
++            ${CMAKE_SOURCE_DIR}/f3d.o2r
++        DEPENDS ${SSB64_F3D_SHADER_FILES}
++            ${CMAKE_SOURCE_DIR}/tools/package_shader_archive.py
+         COMMENT "Packaging Fast3D shaders into f3d.o2r"
+     )
+@@ -1124,8 +1127,11 @@ else()
+     add_custom_command(
+         OUTPUT ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/f3d.o2r
+-        COMMAND ${CMAKE_COMMAND} -E tar cf ${CMAKE_SOURCE_DIR}/f3d.o2r --format=zip shaders
+-        DEPENDS ${SSB64_F3D_SHADER_FILES}
+-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libultraship/src/fast
++        COMMAND ${Python3_EXECUTABLE}
++            ${CMAKE_SOURCE_DIR}/tools/package_shader_archive.py
++            ${CMAKE_SOURCE_DIR}/libultraship/src/fast/shaders
++            ${CMAKE_SOURCE_DIR}/f3d.o2r
++        DEPENDS ${SSB64_F3D_SHADER_FILES}
++            ${CMAKE_SOURCE_DIR}/tools/package_shader_archive.py
+         COMMENT "Packaging Fast3D shaders into f3d.o2r (mobile)"
+     )
+diff --git a/tools/package_shader_archive.py b/tools/package_shader_archive.py
+new file mode 100644
+--- /dev/null
++++ b/tools/package_shader_archive.py
+@@ -0,0 +1,40 @@
++#!/usr/bin/env python3
++"""Create the ROM-free Fast3D shader archive reproducibly."""
++
++from __future__ import annotations
++
++import pathlib
++import sys
++import zipfile
++
++
++FIXED_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
++
++
++def main() -> int:
++    if len(sys.argv) != 3:
++        print("usage: package_shader_archive.py SHADERS_DIR OUTPUT", file=sys.stderr)
++        return 2
++
++    shaders = pathlib.Path(sys.argv[1]).resolve(strict=True)
++    output = pathlib.Path(sys.argv[2])
++    files = sorted(path for path in shaders.rglob("*") if path.is_file())
++    if not files:
++        print(f"no shader files found under {shaders}", file=sys.stderr)
++        return 1
++
++    output.parent.mkdir(parents=True, exist_ok=True)
++    with zipfile.ZipFile(output, "w") as archive:
++        for source in files:
++            relative = source.relative_to(shaders).as_posix()
++            info = zipfile.ZipInfo(f"shaders/{relative}", FIXED_TIMESTAMP)
++            info.compress_type = zipfile.ZIP_DEFLATED
++            info.create_system = 3
++            info.external_attr = 0o100644 << 16
++            archive.writestr(info, source.read_bytes(), compresslevel=9)
++
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

@@ -151,6 +151,12 @@ rights and dependency manifests, and license/notice files discovered in both
 the pinned source tree and the selected build's fetched dependencies. It
 normalizes archive timestamps and ordering, then audits the app and IPA. The
 same audited input must produce identical IPA bytes on repeated packaging.
+The iOS compile maps checkout/build prefixes to stable labels, the renderer
+shader archive uses sorted entries and fixed timestamps, and the unsigned
+proof link omits the otherwise-random Mach-O UUID. Together these make the
+app executable and IPA reproducible across different checkout roots on the
+same pinned toolchain, at the cost of UUID-based crash-symbol matching for
+this unsigned proof artifact.
 
 Run either audit explicitly with:
 

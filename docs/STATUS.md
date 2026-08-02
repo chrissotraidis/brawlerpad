@@ -6,8 +6,8 @@ Updated: 2026-08-02.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: the remaining touch gameplay, hardware, lifecycle/audio, clean-
-checkout, and BrawlerPad macOS package work stays explicitly open.
+partial: the remaining touch gameplay, hardware, lifecycle/audio, and
+BrawlerPad macOS package work stays explicitly open.
 
 ## Verified
 
@@ -116,7 +116,7 @@ checkout, and BrawlerPad macOS package work stays explicitly open.
   and signing material. Its sole O2R is a bounded, entry-validated 21 KiB
   Fast3D shader archive.
 - Two packages from the same audited app produced identical bytes. The 3.4 MiB
-  unsigned IPA has SHA-256 `d7e4d180...d5672b`, embeds 28 actual license/notice
+  unsigned IPA has SHA-256 `2b688a5e...a4f291`, embeds 28 actual license/notice
   files plus the rights/dependency manifests, and passed ZIP traversal,
   extraction, executable-identity, and recursive app audits. Injected ROM,
   signature, and personal-path fixtures were all rejected.
@@ -124,6 +124,11 @@ checkout, and BrawlerPad macOS package work stays explicitly open.
   fixed. Its corrected form rejected the prior binary; iOS compiler prefix
   maps now replace checkout/build roots with stable labels, and the rebuilt
   app passes the corrected recursive scan without exceptions.
+- A fresh repository clone fetched all exact upstream pins, replayed every
+  ordered patch, and produced a clean audited iPhoneOS build without a ROM.
+  Stable path mapping, deterministic shader archiving, and a reproducible
+  device link made its executable, shader archive, and final IPA byte-identical
+  to independently produced artifacts from the primary checkout.
 
 ## In progress
 
@@ -131,15 +136,14 @@ checkout, and BrawlerPad macOS package work stays explicitly open.
   on physical hardware.
 - Complete touch stage-select, active-match, pause, results, Classic, and
   simultaneous-multitouch acceptance; repeat on iPhone.
-- Reproduce source reconstruction and the release build from a fresh checkout.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 
 ## Not yet claimed
 
 - A BrawlerPad macOS app bundle.
-- Physical device testing, complete touch gameplay, the full lifecycle/audio
-  interruption matrix, or clean-checkout reproducibility.
+- Physical device testing, complete touch gameplay, or the full lifecycle/audio
+  interruption matrix.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

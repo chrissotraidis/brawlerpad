@@ -192,9 +192,9 @@ or a shader archive over 1 MiB.
 
 Two independently created IPAs were byte-identical. The accepted unsigned
 `BrawlerPad-0.1.0-preview.1-unsigned.ipa` is 3.4 MiB with SHA-256
-`d7e4d1806b05b999ccb1d03344a3e1b89aefd014d00bf52a3088fd0d7dd5672b`;
+`2b688a5eec3ce8f1715a05585f76a498ccbb7670f45fd4b15f068fa40ba4f291`;
 the contained executable has SHA-256
-`8dc05e50b0594550808804748f5b1ad47c44f1ff354ff0c111e6a259d9a3fb69`.
+`669d1c148985639d25d1cb884a82bf7b05671595c353c6e2e3b24dd1db8c138f`.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
 `_CodeSignature`, and an embedded personal path.
@@ -204,6 +204,16 @@ negative in the first scanner revision. The old binary then failed on its
 absolute checkout strings. Global iOS `-ffile-prefix-map` options now rewrite
 source and build prefixes to stable `BattleShip/` and `BrawlerPadBuild/`
 labels; the corrected scanner passes the rebuilt binary without a waiver.
+
+A fresh local Git clone then fetched every official upstream source at the
+recorded pin and replayed all patches. Its 11 BattleShip, 13 libultraship, and
+1 decomp modified files matched the working reference byte-for-byte. The clean
+iPhoneOS build passed the strict audit without any ROM present. Fixed-prefix
+compilation, a sorted fixed-timestamp shader ZIP, and omission of the linker's
+random `LC_UUID` made the clean and primary executables identical at the hash
+above; `f3d.o2r` was also identical at SHA-256
+`19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+Packaging each independently produced byte-identical IPAs at the recorded hash.
 
 This proves native device compilation and unsigned release packaging, not
 physical-device installation or runtime behavior. Re-sign/install/launch and

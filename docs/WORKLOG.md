@@ -198,8 +198,13 @@
 - Packaged actual source and fetched-dependency notices (28 files), normalized
   timestamps and ordering, and proved two independently produced IPAs were
   byte-identical. The accepted unsigned proof IPA SHA-256 is
-  `d7e4d1806b05b999ccb1d03344a3e1b89aefd014d00bf52a3088fd0d7dd5672b`.
+  `2b688a5eec3ce8f1715a05585f76a498ccbb7670f45fd4b15f068fa40ba4f291`.
 - An audit self-test exposed a false negative caused by an early-exiting grep
   under `pipefail`. Replacing it with a full-stream scanner made the old binary
   fail on absolute checkout paths. Added global iOS compiler prefix maps,
   rebuilt, and verified the corrected audit sees only stable source labels.
+- Reconstructed from a fresh Git clone and official pinned upstream URLs, then
+  rebuilt without a ROM. Replaced timestamp-bearing shader packaging with a
+  sorted fixed-timestamp ZIP generator and removed the linker's random UUID
+  from the unsigned proof executable. Primary and clean-checkout executable,
+  shader archive, and IPA hashes then matched exactly.

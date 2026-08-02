@@ -34,8 +34,8 @@ bundle contains no ROM or generated playable archive; its only `.o2r` is the
 small renderer-shader archive required by Fast3D.
 
 The remaining touch gameplay matrix, extended lifecycle stress, real audio
-interruption/route testing, physical-device testing, clean-checkout build
-reproduction, and native BrawlerPad macOS packaging remain in progress. See
+interruption/route testing, physical-device testing, and native BrawlerPad
+macOS packaging remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
