@@ -59,12 +59,12 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Pending | Pending | Pending |
-| Controller connect/reconnect | SDL registration only | SDL registration only | Pending |
-| Audio/interruption/routes | 32 kHz init only | 32 kHz init only | Pending |
-| Background/foreground | Pending | Pending | Pending |
+| Touch menus and gameplay | Pending | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
+| Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
+| Audio/interruption/routes | 32 kHz init only | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
+| Background/foreground | Pending | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
 | Save/update persistence | Pending | Pending | Pending |
-| Rotation/safe areas/aspect | Pending | Pending | Pending |
+| Rotation/safe areas/aspect | Pending | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
 
 ### iPhone first-run proof
 
@@ -114,6 +114,42 @@ touches, layout move/resize/hide/reset, separate phone/tablet persistence,
 controller auto-hide, cancellation on interruption, and safe-area behavior in:
 menus, character select, stage select, Classic, Versus, pause, gameplay, and
 results.
+
+The 2026-08-02 iPad pass kept every other simulator shut down. The app exposed
+all controls in the accessibility tree, centered the analog knob correctly,
+and routed the virtual controller to player 1 alongside a host-forwarded
+physical `Gamepad`. Touch Start exited an attract match, touch D-pad moved the
+Mode Select highlight to VS Mode, touch A reached VS Start and character
+select, and touch B returned to the parent menu. The editor visibly resized A,
+marked it hidden, restored defaults, and saved with Done. Automatic controller
+hide and its manual override were both observed. Stage select, sustained
+analog gameplay, pause, results, Classic, simultaneous touches, and the iPhone
+profile remain open and are not claimed by this partial pass.
+
+The first screenshot audit found the D-pad inside the analog footprint and the
+right-side controls collapsed into a dense stack. The rebuilt `tablet-v2`
+defaults follow HarkinianPad's grip-first spacing: D-pad and stick are distinct
+left zones, A/B/Z form a right-side triangle, the smaller yellow C diamond sits
+below it, and L/Start/R occupy separate rails. Portrait-window and full
+landscape Simulator captures showed no touch-control intersections. The
+profile version intentionally prevents prior `tablet-v1` coordinates from
+silently restoring the rejected defaults; Reset now returns to V2.
+
+## iPad lifecycle coverage
+
+The lifecycle-enabled Release build was exercised through three visible Home
+and foreground cycles on the sole booted iPad Pro simulator. For the first two
+cycles PID `15484` remained unchanged; after the touch-layout rebuild the third
+cycle similarly retained PID `16831`. Backgrounding updated the BattleShip
+configuration file, UIKit recorded background snapshot/assertion activity,
+and foreground launch returned the already-running PID. Metal frames and the
+touch accessibility tree reappeared after each resume, and no BrawlerPad crash
+report appeared in either the simulator or host diagnostic-report locations.
+
+This proves iPad background/foreground recovery and the frame/audio pause
+plumbing exercised by SDL application events. It does not prove audible audio
+interruption behavior, route changes, suspension under memory pressure, or
+physical-device timing; those remain explicit hardware tests.
 
 ## Package audit
 

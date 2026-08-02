@@ -1,0 +1,16 @@
+--- a/port/gameloop.cpp
++++ b/port/gameloop.cpp
+@@ -698,6 +698,12 @@
+ 		auto window = context->GetWindow();
+ 		if (window) {
+ 			window->HandleEvents();
++#if defined(__IOS__)
++            if (!window->IsFrameReady()) {
++                std::this_thread::sleep_for(std::chrono::milliseconds(16));
++                return;
++            }
++#endif
+ 		}
+ 	}
+ 	/* Propagate the previous frame's queued framebuffer (if any) to VI's
+

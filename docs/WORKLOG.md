@@ -118,3 +118,45 @@
   scaled BattleShip's hard-coded first-run dimensions. Two visual iPad passes
   caught and then eliminated clipped guidance and a truncated Choose ROM
   button; the rebuilt app subsequently reached the Metal opening sequence.
+
+## 2026-08-02 — customizable native touch controls
+
+- Added a UIKit overlay with analog, A/B/Z/L/R/Start, C directions, optional
+  D-pad, multi-touch-safe independent controls, opacity, and safe-area-aware
+  phone/tablet layouts. Input is emitted through an SDL virtual controller and
+  normalized by the existing ControlDeck mappings.
+- Added a persistent native menu button plus Settings → Input Mappings options
+  for enable, controller auto-hide, opacity, and customization. The editor
+  supports drag, 70–150% scale, hide/show, reset, and separate saved phone and
+  tablet profiles.
+- Corrected Simulator enumeration so the touch controller remains on player 1
+  even when a host `Gamepad` appears first, and fixed the analog knob's initial
+  tracking state so it starts centered.
+- Kept one iPad Pro 13-inch (M5) simulator as the only booted simulator. Visual
+  testing proved controller auto-hide/manual override, editor resize/hide/reset,
+  touch Start/A/B/D-pad navigation, VS Mode entry, and character-select arrival.
+- Captured the work as ordered exact-pin patches and verified that applying
+  them to BattleShip `4e7f1dc` reproduces every touched file byte-for-byte.
+
+## 2026-08-02 — touch-layout V2 and iPad lifecycle recovery
+
+- Captured before/after iPad screenshots after feedback that the initial
+  defaults still overlapped. The audit confirmed D-pad/stick contention and a
+  compressed right-side cluster.
+- Replaced those defaults with HarkinianPad's grip-first geometry: distinct
+  D-pad and stick zones, a right-side A/B/Z triangle, a separate yellow C
+  diamond, and lower shoulder rails. Added explicit D-pad/C accessibility
+  labels and bumped phone/tablet persistence to V2 so rejected V1 coordinates
+  cannot reappear automatically.
+- Rebuilt and inspected the sole iPad simulator in both presentations. A final
+  correction moved Z out of the left cluster; the accepted screenshot has no
+  touch-control intersections and preserves safe-area margins.
+- Added SDL application-event handling that gates game frames while
+  backgrounded, pauses/clears queued audio, safely flushes configuration, and
+  resumes on foreground events.
+- Ran three visible Home/resume cycles. Each returned the existing process,
+  settings flushed on background, Metal/touch output resumed, and no recent
+  BrawlerPad crash report was present. Audible interruptions and route changes
+  remain physical-device tests.
+- Recorded the layout revision as ordered BattleShip patch 0005 and verified
+  clean reverse/apply plus byte-for-byte reproduction against the exact pin.

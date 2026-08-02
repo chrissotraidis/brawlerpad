@@ -4,9 +4,9 @@ Updated: 2026-08-02.
 
 ## Current milestone
 
-Milestone 4/5 — native iPhone and iPad simulator application plus ROM import
-and on-device asset extraction. Phone and tablet runtime proof is complete;
-touch and lifecycle work are next.
+Milestone 6/7 — customizable touch input, its revised non-overlapping iPad
+layout, and iPad background/foreground recovery are proven. The remaining
+touch gameplay, iPhone lifecycle, and real interruption matrix is next.
 
 ## Verified
 
@@ -76,11 +76,37 @@ touch and lifecycle work are next.
 - iOS UI scaling now selects a 1x compact-phone or 2x tablet base from SDL's
   usable display bounds. The iPad first-run window also scales its explicit
   widths, and visual reinspection proved readable text and unclipped controls.
+- A UIKit multi-touch overlay now supplies analog, A/B/Z/L/R/Start, four
+  C-directions, and optional D-pad input through an SDL virtual game controller
+  rather than game-specific simulation hooks. It is pinned to ControlDeck port
+  1 even when Simulator enumerates a host-forwarded gamepad first.
+- Touch controls have adjustable opacity, automatic physical-controller hide,
+  safe-area-aware phone/tablet defaults, separate persisted layouts, and an
+  editor for move, 70–150% resize, hide/show, reset, and save. Background/menu
+  transitions cancel held inputs.
+- On the sole booted iPad simulator, touch Start exited attract gameplay and
+  skipped the intro, D-pad selected VS Mode, A entered VS Start and then the
+  character-select screen, and B returned to the parent menu. The editor's
+  resize, hide, reset, and Done paths were visibly exercised. A forwarded
+  `Gamepad` also proved default touch auto-hide; disabling that option for the
+  test showed both inputs can remain routed to player 1.
+- A screenshot-led comparison against HarkinianPad exposed collisions in the
+  first defaults. The version-2 grip layout now keeps D-pad, stick, A/B/Z,
+  C-button, and shoulder groups separate in both inspected iPad orientations,
+  uses an uncluttered yellow C diamond, and labels D-pad/C directions
+  explicitly for accessibility. A Release simulator rebuild passed.
+- iOS lifecycle handling now gates simulation/render work while backgrounded,
+  pauses and clears queued SDL audio, flushes window/config state safely, and
+  resumes those paths on foreground events. Three visible iPad Home/resume
+  cycles preserved each running PID, updated the config file on background,
+  restored Metal and touch presentation, and left zero recent crash reports.
 
 ## In progress
 
-- Add and tune the HarkinianPad-derived customizable touch controller.
-- Implement and verify iOS lifecycle/audio interruption behavior.
+- Repeat lifecycle recovery on iPhone and verify real audio interruptions and
+  route changes on physical hardware.
+- Complete touch stage-select, active-match, pause, results, Classic, and
+  simultaneous-multitouch acceptance; repeat on iPhone.
 - Remove absolute developer/build paths from packaged binaries.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
@@ -88,8 +114,8 @@ touch and lifecycle work are next.
 ## Not yet claimed
 
 - A BrawlerPad macOS app bundle.
-- Physical device testing, touch gameplay, lifecycle recovery, unsigned IPA,
-  or clean-checkout reproducibility.
+- Physical device testing, complete touch gameplay, iPhone lifecycle recovery,
+  unsigned IPA, or clean-checkout reproducibility.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

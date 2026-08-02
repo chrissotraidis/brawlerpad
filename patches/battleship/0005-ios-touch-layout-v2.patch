@@ -1,0 +1,168 @@
+diff --git a/port/ios/brawlerpad_touch_controls.mm b/port/ios/brawlerpad_touch_controls.mm
+index 2ae93ca..7718f39 100644
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -288,10 +288,10 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+         [self button:@"▶" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_RIGHT id:@"d-right" pill:NO]
+     ];
+     NSArray* c = @[
+-        [self button:@"C▲" kind:BPInputCDirection code:0 id:@"c-up" pill:NO],
+-        [self button:@"C▼" kind:BPInputCDirection code:1 id:@"c-down" pill:NO],
+-        [self button:@"C◀" kind:BPInputCDirection code:2 id:@"c-left" pill:NO],
+-        [self button:@"C▶" kind:BPInputCDirection code:3 id:@"c-right" pill:NO]
++        [self button:@"▲" kind:BPInputCDirection code:0 id:@"c-up" pill:NO],
++        [self button:@"▼" kind:BPInputCDirection code:1 id:@"c-down" pill:NO],
++        [self button:@"◀" kind:BPInputCDirection code:2 id:@"c-left" pill:NO],
++        [self button:@"▶" kind:BPInputCDirection code:3 id:@"c-right" pill:NO]
+     ];
+     self.buttons = [@[a, b, z, l, r, start] arrayByAddingObjectsFromArray:[d arrayByAddingObjectsFromArray:c]];
+     self.controls = [@[self.stick] arrayByAddingObjectsFromArray:self.buttons];
+@@ -307,6 +307,10 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     b.idleColor = [UIColor colorWithRed:0.06 green:0.58 blue:0.24 alpha:0.66];
+     for (BrawlerPadTouchButton* button in c) button.idleColor = [UIColor colorWithRed:0.94 green:0.66 blue:0.08 alpha:0.66];
+     for (BrawlerPadTouchButton* button in self.buttons) button.backgroundColor = button.idleColor;
++    NSArray<NSString*>* dLabels = @[@"D-pad Up", @"D-pad Down", @"D-pad Left", @"D-pad Right"];
++    NSArray<NSString*>* cLabels = @[@"C Up", @"C Down", @"C Left", @"C Right"];
++    for (NSUInteger i = 0; i < d.count; ++i) ((BrawlerPadTouchButton*)d[i]).accessibilityLabel = dLabels[i];
++    for (NSUInteger i = 0; i < c.count; ++i) ((BrawlerPadTouchButton*)c[i]).accessibilityLabel = cLabels[i];
+     [self installEditor];
+     return self;
+ }
+@@ -324,7 +328,7 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     view.center = center;
+ }
+ - (BOOL)isCompact { return MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) < 600.0; }
+-- (NSString*)profileName { return [self isCompact] ? @"phone-v1" : @"tablet-v1"; }
++- (NSString*)profileName { return [self isCompact] ? @"phone-v2" : @"tablet-v2"; }
+ - (NSString*)storageKey { return [@"BrawlerPad.TouchLayout." stringByAppendingString:self.profile ?: [self profileName]]; }
+ - (void)loadProfile {
+     NSString* next = [self profileName];
+@@ -340,30 +344,104 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     UIEdgeInsets safe = self.safeAreaInsets;
+     CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
+     BOOL compact = [self isCompact];
+-    CGFloat unit = compact ? 46.0 : 62.0;
+-    CGFloat stickSize = compact ? 122.0 : 168.0;
+-    CGPoint left = CGPointMake(safe.left + (compact ? 92.0 : 132.0), h - safe.bottom - (compact ? 82.0 : 118.0));
+-    CGPoint right = CGPointMake(w - safe.right - (compact ? 78.0 : 128.0), h - safe.bottom - (compact ? 78.0 : 112.0));
+-    [self setFrameFor:@"stick" center:left size:CGSizeMake(stickSize, stickSize)];
+-    [self setFrameFor:@"a" center:CGPointMake(right.x + unit * .40, right.y + unit * .18) size:CGSizeMake(unit * 1.18, unit * 1.18)];
+-    [self setFrameFor:@"b" center:CGPointMake(right.x - unit * .85, right.y + unit * .22) size:CGSizeMake(unit, unit)];
+-    [self setFrameFor:@"z" center:CGPointMake(right.x - unit * .15, right.y - unit * 1.05) size:CGSizeMake(unit, unit)];
+-    CGFloat top = safe.top + (compact ? 34.0 : 48.0);
+-    [self setFrameFor:@"l" center:CGPointMake(safe.left + (compact ? 60.0 : 90.0), top) size:CGSizeMake(unit * 1.55, unit * .72)];
+-    [self setFrameFor:@"start" center:CGPointMake(w * .5, top) size:CGSizeMake(unit * 1.55, unit * .68)];
+-    [self setFrameFor:@"r" center:CGPointMake(w - safe.right - (compact ? 60.0 : 90.0), top) size:CGSizeMake(unit * 1.55, unit * .72)];
+-    CGFloat dUnit = unit * .68, dRadius = unit * .72;
+-    CGPoint dc = CGPointMake(left.x - (compact ? 18.0 : 26.0), left.y - stickSize * .78);
+-    [self setFrameFor:@"d-up" center:CGPointMake(dc.x, dc.y-dRadius) size:CGSizeMake(dUnit,dUnit)];
+-    [self setFrameFor:@"d-down" center:CGPointMake(dc.x, dc.y+dRadius) size:CGSizeMake(dUnit,dUnit)];
+-    [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius, dc.y) size:CGSizeMake(dUnit,dUnit)];
+-    [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius, dc.y) size:CGSizeMake(dUnit,dUnit)];
+-    CGFloat cUnit = unit * .72, cRadius = unit * .78;
+-    CGPoint cc = CGPointMake(right.x, right.y - stickSize * .95);
+-    [self setFrameFor:@"c-up" center:CGPointMake(cc.x, cc.y-cRadius) size:CGSizeMake(cUnit,cUnit)];
+-    [self setFrameFor:@"c-down" center:CGPointMake(cc.x, cc.y+cRadius) size:CGSizeMake(cUnit,cUnit)];
+-    [self setFrameFor:@"c-left" center:CGPointMake(cc.x-cRadius, cc.y) size:CGSizeMake(cUnit,cUnit)];
+-    [self setFrameFor:@"c-right" center:CGPointMake(cc.x+cRadius, cc.y) size:CGSizeMake(cUnit,cUnit)];
++    if (compact) {
++        // HarkinianPad's phone geometry uses independent upper and lower
++        // thumb zones instead of shrinking the tablet layout into one stack.
++        CGFloat left = safe.left + 10.0;
++        CGFloat right = safe.right + 10.0;
++        CGFloat top = safe.top + 36.0;
++        CGFloat shoulderHeight = 44.0;
++        CGFloat shoulderWidth = 76.0;
++        [self setFrameFor:@"l" center:CGPointMake(left + shoulderWidth * .5, top + shoulderHeight * .5)
++                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
++        [self setFrameFor:@"r" center:CGPointMake(w - right - shoulderWidth * .5, top + shoulderHeight * .5)
++                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
++        CGFloat startWidth = 78.0;
++        [self setFrameFor:@"start"
++                   center:CGPointMake(w - right - shoulderWidth - 8.0 - startWidth * .5,
++                                      top + shoulderHeight * .5)
++                     size:CGSizeMake(startWidth, shoulderHeight)];
++
++        CGFloat dSize = 44.0, dRadius = 38.0;
++        CGPoint dc = CGPointMake(left + 54.0, top + shoulderHeight + 80.0);
++        [self setFrameFor:@"d-up" center:CGPointMake(dc.x, dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
++        [self setFrameFor:@"d-down" center:CGPointMake(dc.x, dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
++        [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
++        [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
++
++        CGFloat stickSize = 116.0;
++        [self setFrameFor:@"stick" center:CGPointMake(w * .214455, h * .722222)
++                     size:CGSizeMake(stickSize, stickSize)];
++        CGFloat faceSize = 52.0;
++        CGFloat faceCenterX = w - right - 58.0;
++        CGFloat faceCenterY = h - safe.bottom - 82.0;
++        [self setFrameFor:@"z" center:CGPointMake(faceCenterX + 12.0, faceCenterY - 44.0)
++                     size:CGSizeMake(faceSize,faceSize)];
++        [self setFrameFor:@"a" center:CGPointMake(w * .876382, h * .737607) size:CGSizeMake(faceSize,faceSize)];
++        [self setFrameFor:@"b" center:CGPointMake(w * .805687, h * .664957) size:CGSizeMake(faceSize,faceSize)];
++        CGFloat cSize = 40.0;
++        [self setFrameFor:@"c-up" center:CGPointMake(w * .866904, h * .398291) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-down" center:CGPointMake(w * .866509, h * .570085) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-left" center:CGPointMake(w * .823855, h * .485470) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-right" center:CGPointMake(w * .911137, h * .486325) size:CGSizeMake(cSize,cSize)];
++        for (BrawlerPadTouchButton* button in self.buttons)
++            button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
++        [self control:@"start"].accessibilityLabel = @"Start";
++        return;
++    }
++
++    // Tablet V2 follows HarkinianPad's accepted grip-first iPad layout: the
++    // D-pad, stick, face triangle, and C diamond occupy separate zones.
++    CGFloat scale = std::clamp(h / 834.0, .78, 1.12);
++    CGFloat edge = 18.0 * scale;
++    CGFloat left = safe.left + edge;
++    CGFloat right = safe.right + edge;
++    CGFloat usableWidth = w - safe.left - safe.right;
++    CGFloat railWidth = MIN(250.0 * scale, usableWidth * .22);
++    CGFloat leftCenter = safe.left + railWidth * .5;
++    CGFloat rightCenter = w - safe.right - railWidth * .5;
++    CGFloat gripTopY = MAX(safe.top + edge, h * .38);
++    CGFloat middleCenterY = h * .60;
++
++    CGFloat pillHeight = 54.0 * scale;
++    CGFloat shoulderWidth = 106.0 * scale;
++    CGFloat rowY = gripTopY + 55.0 * scale;
++    [self setFrameFor:@"l" center:CGPointMake(left + shoulderWidth * .5, rowY + pillHeight * .5)
++                 size:CGSizeMake(shoulderWidth,pillHeight)];
++    [self setFrameFor:@"r" center:CGPointMake(w - right - shoulderWidth * .5, rowY + pillHeight * .5)
++                 size:CGSizeMake(shoulderWidth,pillHeight)];
++    CGFloat startWidth = 88.0 * scale;
++    [self setFrameFor:@"start"
++               center:CGPointMake(w - right - shoulderWidth - 12.0 * scale - startWidth * .5,
++                                  rowY + pillHeight * .5)
++                 size:CGSizeMake(startWidth,pillHeight)];
++
++    CGFloat dSize = 52.0 * scale, dRadius = 48.0 * scale;
++    CGPoint dc = CGPointMake(leftCenter - 30.0 * scale, middleCenterY + 5.0 * scale);
++    [self setFrameFor:@"d-up" center:CGPointMake(dc.x,dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
++    [self setFrameFor:@"d-down" center:CGPointMake(dc.x,dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
++    [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
++    [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
++
++    CGFloat stickSize = 150.0 * scale;
++    [self setFrameFor:@"stick" center:CGPointMake(w * .164363, h * .745313)
++                 size:CGSizeMake(stickSize,stickSize)];
++    CGFloat faceSize = 66.0 * scale;
++    CGFloat faceCenterX = rightCenter + 24.0 * scale;
++    CGFloat faceCenterY = middleCenterY + 30.0 * scale;
++    [self setFrameFor:@"z"
++               center:CGPointMake(faceCenterX, faceCenterY - faceSize * .5 - 12.0 * scale)
++                 size:CGSizeMake(faceSize,faceSize)];
++    [self setFrameFor:@"a" center:CGPointMake(w * .893309, h * .693020) size:CGSizeMake(faceSize,faceSize)];
++    [self setFrameFor:@"b" center:CGPointMake(w * .826029, h * .635117) size:CGSizeMake(faceSize,faceSize)];
++    CGFloat cSize = 46.0 * scale;
++    [self setFrameFor:@"c-up" center:CGPointMake(w * .903338, h * .805484) size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-down" center:CGPointMake(w * .902240, h * .905152) size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-left" center:CGPointMake(w * .856515, h * .853922) size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-right" center:CGPointMake(w * .948331, h * .852945) size:CGSizeMake(cSize,cSize)];
++    CGFloat labelSize = 17.0 * scale;
++    for (BrawlerPadTouchButton* button in self.buttons)
++        button.titleLabel.font = [UIFont systemFontOfSize:labelSize weight:UIFontWeightSemibold];
+ }
+ - (void)clampControl:(UIView*)view {
+     UIEdgeInsets s = self.safeAreaInsets;

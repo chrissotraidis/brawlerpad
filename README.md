@@ -19,11 +19,19 @@ reproducible BrawlerPad patch. A native arm64 iOS simulator app also now builds,
 installs, opens a ROM through Files, validates it, runs Torch extraction
 in-process, and launches the Metal-rendered game on an iPhone simulator. The
 same bundle has completed Files import, linked extraction, and native Metal
-boot on an iPad simulator, with form-factor-aware setup UI. The app bundle
-contains no ROM or generated playable archive.
+boot on an iPad simulator, with form-factor-aware setup UI. A native,
+customizable multi-touch controller now drives the same SDL/ControlDeck path
+as physical controllers; iPad testing has covered title/menu navigation,
+VS-mode character select, controller auto-hide, and the move/resize/hide/reset
+editor. A second HarkinianPad-based grip-layout pass separates the D-pad,
+stick, A/B/Z triangle, C diamond, and shoulder rails without control overlap.
+Three iPad Home/resume cycles preserved the same process, flushed settings,
+resumed Metal and touch presentation, and produced no crash report. The app
+bundle contains no ROM or generated playable archive.
 
-Customizable touch controls, lifecycle recovery, physical-device testing, and
-release packaging remain in progress. See
+The remaining touch gameplay matrix, iPhone lifecycle coverage, real audio
+interruption/route testing, physical-device testing, and release packaging
+remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
@@ -72,6 +80,13 @@ families. On first launch, choose your legally obtained supported ROM through
 Files; BrawlerPad uses only a temporary validated copy to generate resources
 under Application Support, then deletes that copy. See
 [docs/BUILDING.md](docs/BUILDING.md) for install and launch commands.
+
+The in-game Settings → Input Mappings page can enable or hide the touch
+overlay, change its opacity, and open the layout editor. Phone and tablet
+layouts persist separately. A physical controller hides gameplay controls by
+default while leaving the native menu button available. Version-2 defaults use
+separate HarkinianPad-inspired thumb zones and explicit D-pad/C-button
+accessibility labels.
 
 ## Project documentation
 

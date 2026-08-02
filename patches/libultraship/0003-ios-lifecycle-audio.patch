@@ -1,0 +1,234 @@
+--- a/include/fast/backends/gfx_sdl.h
++++ b/include/fast/backends/gfx_sdl.h
+@@ -57,6 +57,9 @@
+     int mSdlToLusTable[512];
+     float mMouseWheelX = 0.0f;
+     float mMouseWheelY = 0.0f;
++#ifdef __IOS__
++    bool mIsBackgrounded = false;
++#endif
+ #ifdef __OpenBSD__
+     int mBsdTick; // store kern.clockrate's tick (microseconds) to adjust sleep timing
+ #endif
+--- a/include/ship/audio/Audio.h
++++ b/include/ship/audio/Audio.h
+@@ -25,6 +25,9 @@
+     void SetAudioChannels(AudioChannelsSetting channels);
+     AudioChannelsSetting GetAudioChannels() const;
+ 
++    /** Pauses or resumes the active audio backend. */
++    void SetPaused(bool paused);
++
+   protected:
+     void InitAudioPlayer();
+ 
+--- a/include/ship/audio/AudioPlayer.h
++++ b/include/ship/audio/AudioPlayer.h
+@@ -32,6 +32,10 @@
+ 
+     bool IsInitialized();
+ 
++    /** Pauses or resumes output without destroying the backend. */
++    virtual void SetPaused(bool) {
++    }
++
+     int32_t GetSampleRate() const;
+ 
+     int32_t GetSampleLength() const;
+--- a/include/ship/audio/SDLAudioPlayer.h
++++ b/include/ship/audio/SDLAudioPlayer.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ #include "AudioPlayer.h"
++#include <atomic>
+ #include <SDL2/SDL.h>
+ 
+ namespace Ship {
+@@ -10,6 +11,7 @@
+     ~SDLAudioPlayer();
+ 
+     int Buffered() override;
++    void SetPaused(bool paused) override;
+ 
+   protected:
+     bool DoInit() override;
+@@ -19,5 +21,6 @@
+   private:
+     SDL_AudioDeviceID mDevice = 0;
+     int32_t mNumChannels = 2;
++    std::atomic<bool> mPaused = false;
+ };
+ } // namespace Ship
+--- a/src/fast/Fast3dWindow.cpp
++++ b/src/fast/Fast3dWindow.cpp
+@@ -120,10 +120,16 @@
+ }
+ 
+ void Fast3dWindow::GetPixelDepthPrepare(float x, float y) {
++    if (!IsFrameReady()) {
++        return;
++    }
+     mInterpreter->GetPixelDepthPrepare(x, y);
+ }
+ 
+ uint16_t Fast3dWindow::GetPixelDepth(float x, float y) {
++    if (!IsFrameReady()) {
++        return 0;
++    }
+     return mInterpreter->GetPixelDepth(x, y);
+ }
+ 
+--- a/src/fast/backends/gfx_sdl2.cpp
++++ b/src/fast/backends/gfx_sdl2.cpp
+@@ -9,6 +9,11 @@
+ #endif
+ 
+ #include "ship/Context.h"
++#ifdef __IOS__
++#include "ship/audio/Audio.h"
++#include "ship/config/Config.h"
++#include "ship/window/Window.h"
++#endif
+ #include "ship/config/ConsoleVariable.h"
+ #include "ship/controller/controldeck/ControlDeck.h"
+ #include "ship/window/FileDropMgr.h"
+@@ -54,6 +59,28 @@
+ #endif
+ 
+ namespace Fast {
++#ifdef __IOS__
++static void SaveIOSConfiguration() {
++    auto context = Ship::Context::GetInstance();
++    if (!context) {
++        return;
++    }
++    if (context->GetWindow()) {
++        context->GetWindow()->SaveWindowToConfig();
++    }
++    if (context->GetConfig()) {
++        context->GetConfig()->Save();
++    }
++}
++
++static void SetIOSAudioPaused(bool paused) {
++    auto context = Ship::Context::GetInstance();
++    if (context && context->GetAudio()) {
++        context->GetAudio()->SetPaused(paused);
++    }
++}
++#endif
++
+ const SDL_Scancode lus_to_sdl_table[] = {
+     SDL_SCANCODE_UNKNOWN,
+     SDL_SCANCODE_ESCAPE,
+@@ -639,9 +666,19 @@
+             OnKeyup(event.key.keysym.scancode);
+             break;
+         case SDL_MOUSEBUTTONDOWN:
++#ifdef __IOS__
++            if (event.button.which == SDL_TOUCH_MOUSEID) {
++                break;
++            }
++#endif
+             OnMouseButtonDown(event.button.button - 1);
+             break;
+         case SDL_MOUSEBUTTONUP:
++#ifdef __IOS__
++            if (event.button.which == SDL_TOUCH_MOUSEID) {
++                break;
++            }
++#endif
+             OnMouseButtonUp(event.button.button - 1);
+             break;
+         case SDL_MOUSEWHEEL:
+@@ -678,6 +715,31 @@
+         case SDL_DROPFILE:
+             Ship::Context::GetInstance()->GetFileDropMgr()->SetDroppedFile(event.drop.file);
+             break;
++#ifdef __IOS__
++        case SDL_APP_WILLENTERBACKGROUND:
++            mIsBackgrounded = true;
++            SaveIOSConfiguration();
++            SetIOSAudioPaused(true);
++            SPDLOG_INFO("iOS application entering background");
++            break;
++        case SDL_APP_DIDENTERBACKGROUND:
++        case SDL_APP_WILLENTERFOREGROUND:
++            break;
++        case SDL_APP_DIDENTERFOREGROUND:
++            SetIOSAudioPaused(false);
++            mIsBackgrounded = false;
++            SPDLOG_INFO("iOS application entered foreground");
++            break;
++        case SDL_APP_LOWMEMORY:
++            SPDLOG_WARN("iOS reported low memory");
++            break;
++        case SDL_APP_TERMINATING:
++            mIsBackgrounded = true;
++            SaveIOSConfiguration();
++            SetIOSAudioPaused(true);
++            SPDLOG_INFO("iOS application terminating");
++            break;
++#endif
+         case SDL_QUIT:
+             Close();
+             break;
+@@ -707,7 +769,11 @@
+ }
+ 
+ bool GfxWindowBackendSDL2::IsFrameReady() {
++#ifdef __IOS__
++    return !mIsBackgrounded;
++#else
+     return true;
++#endif
+ }
+ 
+ static uint64_t qpc_to_100ns(uint64_t qpc) {
+--- a/src/ship/audio/Audio.cpp
++++ b/src/ship/audio/Audio.cpp
+@@ -88,4 +88,10 @@
+     return mAudioSettings.ChannelSetting;
+ }
+ 
++void Audio::SetPaused(bool paused) {
++    if (mAudioPlayer) {
++        mAudioPlayer->SetPaused(paused);
++    }
++}
++
+ } // namespace Ship
+--- a/src/ship/audio/SDLAudioPlayer.cpp
++++ b/src/ship/audio/SDLAudioPlayer.cpp
+@@ -21,6 +21,9 @@
+ }
+ 
+ bool SDLAudioPlayer::DoInit() {
++#ifdef __IOS__
++    SDL_SetHint(SDL_HINT_AUDIO_CATEGORY, "playback");
++#endif
+     if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+         SPDLOG_ERROR("SDL init error: {}", SDL_GetError());
+         return false;
+@@ -53,8 +56,19 @@
+     return SDL_GetQueuedAudioSize(mDevice) / (sizeof(int16_t) * mNumChannels);
+ }
+ 
++void SDLAudioPlayer::SetPaused(bool paused) {
++    mPaused = paused;
++    if (mDevice == 0) {
++        return;
++    }
++    SDL_PauseAudioDevice(mDevice, paused ? 1 : 0);
++    if (paused) {
++        SDL_ClearQueuedAudio(mDevice);
++    }
++}
++
+ void SDLAudioPlayer::DoPlay(const uint8_t* buf, size_t len) {
+-    if (Buffered() < 6000) {
++    if (!mPaused && Buffered() < 6000) {
+         // Don't fill the audio buffer too much in case this happens
+         SDL_QueueAudio(mDevice, buf, len);
+     }
+

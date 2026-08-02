@@ -1,0 +1,803 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -481,7 +481,8 @@
+ file(GLOB_RECURSE SSB64_SRC_PORT "port/*.cpp" "port/*.c" "port/*.h")
+ if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     list(APPEND SSB64_SRC_PORT
+-        ${CMAKE_CURRENT_SOURCE_DIR}/port/ios/ios_rom_picker.mm)
++        ${CMAKE_CURRENT_SOURCE_DIR}/port/ios/ios_rom_picker.mm
++        ${CMAKE_CURRENT_SOURCE_DIR}/port/ios/brawlerpad_touch_controls.mm)
+ endif()
+ list(FILTER SSB64_SRC_PORT EXCLUDE REGEX "port/stubs/")
+ # RelocFileTable.{us,jp}.cpp both define gRelocFileTable — compile only the
+--- a/port/gameloop.cpp
++++ b/port/gameloop.cpp
+@@ -50,6 +50,8 @@
+ /* Defined in port/android_touch_overlay.cpp. Atomic flag drained on the
+  * SDL_main thread to honor the on-screen hamburger menu tap. */
+ extern "C" bool port_drain_pending_menu_toggle(void);
++#elif defined(__IOS__)
++#include "ios/brawlerpad_touch_controls.h"
+ #endif
+ 
+ #include "port_log.h"
+@@ -736,20 +738,45 @@
+ 	ssb64::enhancements::TickDiscordPresence(); // DRP
+ #endif
+ 
++#if defined(__ANDROID__) || defined(__IOS__)
++    /* Native touch menu taps are queued atomically and drained here so
++     * ImGui visibility only mutates on the SDL/game thread. */
+ #if defined(__ANDROID__)
+-	/* Hamburger menu button on the touch overlay sets an atomic flag in
+-	 * port/android_touch_overlay.cpp; drain it here on the SDL_main thread
+-	 * so the ImGui frame currently being built picks up the visibility
+-	 * change. Doing this from the Android UI thread directly would race
+-	 * with Gui::DrawMenu. */
+-	if (port_drain_pending_menu_toggle()) {
+-		auto context = Ship::Context::GetInstance();
+-		if (context && context->GetWindow() && context->GetWindow()->GetGui()
+-		    && context->GetWindow()->GetGui()->GetMenu()) {
+-			context->GetWindow()->GetGui()->GetMenu()->ToggleVisibility();
+-		}
+-	}
++    const bool touchMenuToggle = port_drain_pending_menu_toggle();
++#else
++    const bool touchMenuToggle = BrawlerPadTouchControlsDrainMenuToggle() != 0;
+ #endif
++    if (touchMenuToggle) {
++        auto context = Ship::Context::GetInstance();
++        if (context && context->GetWindow() && context->GetWindow()->GetGui()
++            && context->GetWindow()->GetGui()->GetMenu()) {
++            context->GetWindow()->GetGui()->GetMenu()->ToggleVisibility();
++        }
++    }
++#if defined(__IOS__)
++    {
++        auto context = Ship::Context::GetInstance();
++        const int touchInstanceId = BrawlerPadTouchControlsGetControllerInstanceId();
++        if (context && touchInstanceId >= 0 && context->GetControlDeck()) {
++            // The UIKit virtual controller is always player 1. SDL can
++            // enumerate a host-forwarded physical pad first in Simulator,
++            // which would otherwise route touch to player 2. Keep both
++            // touch and any real player-1 controller normalized through the
++            // same ControlDeck port; auto-hide decides which UI is visible.
++            auto manager = context->GetControlDeck()->GetConnectedPhysicalDeviceManager();
++            if (manager) {
++                manager->UnignoreInstanceIdForPort(0, touchInstanceId);
++                for (uint8_t port = 1; port < 4; ++port) {
++                    manager->IgnoreInstanceIdForPort(port, touchInstanceId);
++                }
++            }
++        }
++        const bool menuVisible = context && context->GetWindow() && context->GetWindow()->GetGui()
++            && context->GetWindow()->GetGui()->GetMenuOrMenubarVisible();
++        BrawlerPadTouchControlsFrameUpdate(menuVisible ? 1 : 0);
++    }
++#endif
++#endif
+ 
+ 	/* Render the staged display list now that all coroutines have yielded.
+ 	 * On Android this hop is load-bearing: ImGui's per-frame
+--- a/port/port.cpp
++++ b/port/port.cpp
+@@ -43,6 +43,8 @@
+ #endif
+ #if defined(__ANDROID__)
+ #include <android/api-level.h>  // android_get_device_api_level (audio-driver gate)
++#elif defined(__IOS__)
++#include "ios/brawlerpad_touch_controls.h"
+ #endif
+ #ifndef DISABLE_SCRIPTING
+ #include "mods/HookManager.h"
+@@ -900,6 +902,12 @@
+ 			port_log("SSB64: Port menu attached\n");
+ 		}
+ 
++#if defined(__IOS__)
++		// Attach before gameplay so ControlDeck sees the SDL hot-plug event
++		// and maps touch through the same path as a physical controller.
++		BrawlerPadTouchControlsInitialize();
++#endif
++
+ #if !defined(__ANDROID__) && !defined(__IOS__)
+ 		// Linux: WMs only show the app icon if SDL_SetWindowIcon is called
+ 		// on the live window. .ico/.icns paths are baked into the .exe /
+@@ -1145,6 +1153,15 @@
+ 	}
+ #endif
+ 
++#if defined(__IOS__)
++	BrawlerPadTouchControlsSetHideWhenControllerConnected(
++		CVarGetInteger("gSettings.BrawlerPad.HideTouchWithController", 1));
++	BrawlerPadTouchControlsSetOpacity(
++		CVarGetFloat("gSettings.BrawlerPad.TouchOpacity", 0.70f));
++	BrawlerPadTouchControlsSetEnabled(
++		CVarGetInteger("gSettings.BrawlerPad.TouchControls", 1));
++#endif
++
+ 	port_log("SSB64: init complete\n");
+ 	return 0;
+ }
+@@ -1202,6 +1219,8 @@
+ 	// so stale handles here become use-after-free in the next SDL session.
+ 	extern void port_touch_overlay_shutdown(void);
+ 	port_touch_overlay_shutdown();
++#elif defined(__IOS__)
++	BrawlerPadTouchControlsShutdown();
+ #endif
+ 	sContext.reset();
+ 	port_log_close();
+--- a/port/gui/PortMenu.cpp
++++ b/port/gui/PortMenu.cpp
+@@ -10,6 +10,9 @@
+ #include "Compat.h"
+ #include "../enhancements/enhancements.h"
+ #include "../interpolation/frame_interpolation.h"
++#if defined(__IOS__)
++#include "../ios/brawlerpad_touch_controls.h"
++#endif
+ #ifdef PORT_HIRES_ENABLED
+ #include "../hires/HiResPack.h"
+ #endif
+@@ -1161,6 +1164,48 @@
+         .HideInSearch(true)
+         .Options(WindowButtonOptions().Tooltip("Toggles the controller configuration window."));
+ 
++#if defined(__IOS__)
++    AddWidget(path, "Touch Controls", WIDGET_SEPARATOR_TEXT);
++    AddWidget(path, "Enable Touch Controls", WIDGET_CVAR_CHECKBOX)
++        .CVar("gSettings.BrawlerPad.TouchControls")
++        .RaceDisable(false)
++        .Callback([](WidgetInfo&) {
++            BrawlerPadTouchControlsSetEnabled(
++                CVarGetInteger("gSettings.BrawlerPad.TouchControls", 1));
++        })
++        .Options(CheckboxOptions()
++                     .DefaultValue(true)
++                     .Tooltip("Shows the native multi-touch controller overlay."));
++    AddWidget(path, "Hide Touch Controls With Controller", WIDGET_CVAR_CHECKBOX)
++        .CVar("gSettings.BrawlerPad.HideTouchWithController")
++        .RaceDisable(false)
++        .Callback([](WidgetInfo&) {
++            BrawlerPadTouchControlsSetHideWhenControllerConnected(
++                CVarGetInteger("gSettings.BrawlerPad.HideTouchWithController", 1));
++        })
++        .Options(CheckboxOptions()
++                     .DefaultValue(true)
++                     .Tooltip("Automatically hides gameplay controls while a physical controller is connected. The menu button remains available."));
++    AddWidget(path, "Touch Control Opacity", WIDGET_CVAR_SLIDER_FLOAT)
++        .CVar("gSettings.BrawlerPad.TouchOpacity")
++        .RaceDisable(false)
++        .Callback([](WidgetInfo&) {
++            BrawlerPadTouchControlsSetOpacity(
++                CVarGetFloat("gSettings.BrawlerPad.TouchOpacity", 0.70f));
++        })
++        .Options(FloatSliderOptions()
++                     .Min(0.25f)
++                     .Max(1.0f)
++                     .DefaultValue(0.70f)
++                     .IsPercentage()
++                     .Tooltip("Sets touch-control transparency from 25% to 100%."));
++    AddWidget(path, "Customize Touch Layout", WIDGET_BUTTON)
++        .RaceDisable(false)
++        .Callback([](WidgetInfo&) { BrawlerPadTouchControlsBeginEditing(); })
++        .Options(ButtonOptions().Tooltip(
++            "Move, resize, hide, show, or reset controls. Phone and tablet layouts are saved separately."));
++#endif
++
+     // --- Controls sidebar: per-player input remapping ---
+     path.sidebarName = "Control Enhancements";
+     path.column = SECTION_COLUMN_1;
+--- /dev/null
++++ b/port/ios/brawlerpad_touch_controls.h
+@@ -0,0 +1,20 @@
++#pragma once
++
++#if defined(__cplusplus)
++extern "C" {
++#endif
++
++int BrawlerPadTouchControlsAvailable(void);
++void BrawlerPadTouchControlsInitialize(void);
++int BrawlerPadTouchControlsGetControllerInstanceId(void);
++void BrawlerPadTouchControlsSetEnabled(int enabled);
++void BrawlerPadTouchControlsSetHideWhenControllerConnected(int enabled);
++void BrawlerPadTouchControlsSetOpacity(float opacity);
++void BrawlerPadTouchControlsBeginEditing(void);
++void BrawlerPadTouchControlsFrameUpdate(int menuVisible);
++int BrawlerPadTouchControlsDrainMenuToggle(void);
++void BrawlerPadTouchControlsShutdown(void);
++
++#if defined(__cplusplus)
++}
++#endif
+--- /dev/null
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -0,0 +1,585 @@
++#if defined(__IOS__)
++
++#import <UIKit/UIKit.h>
++
++#include "brawlerpad_touch_controls.h"
++
++#include <SDL2/SDL.h>
++#include <algorithm>
++#include <atomic>
++#include <cmath>
++#include <mutex>
++
++namespace {
++
++SDL_Joystick* sJoystick = nullptr;
++int sDeviceIndex = -1;
++SDL_JoystickID sTouchInstanceId = -1;
++std::mutex sJoystickMutex;
++std::atomic_bool sEnabled{true};
++std::atomic_bool sHideForController{true};
++std::atomic_bool sPhysicalControllerConnected{false};
++std::atomic_bool sMenuVisible{false};
++std::atomic_bool sMenuTogglePending{false};
++std::atomic<float> sOpacity{0.70f};
++BOOL sEditorRequested = NO;
++BOOL sLifecycleObserversInstalled = NO;
++
++bool sCUp = false;
++bool sCDown = false;
++bool sCLeft = false;
++bool sCRight = false;
++
++bool AttachVirtualController() {
++    std::lock_guard<std::mutex> lock(sJoystickMutex);
++    if (sJoystick != nullptr) {
++        return true;
++    }
++
++    SDL_VirtualJoystickDesc desc;
++    SDL_zero(desc);
++    desc.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
++    desc.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
++    desc.naxes = SDL_CONTROLLER_AXIS_MAX;
++    desc.nbuttons = SDL_CONTROLLER_BUTTON_MAX;
++    desc.vendor_id = 0x045E;
++    desc.product_id = 0x028E;
++    desc.name = "BrawlerPad Touch Controller";
++    sDeviceIndex = SDL_JoystickAttachVirtualEx(&desc);
++    if (sDeviceIndex < 0) {
++        SDL_Log("[BrawlerPad] virtual touch controller attach failed: %s", SDL_GetError());
++        return false;
++    }
++    sJoystick = SDL_JoystickOpen(sDeviceIndex);
++    if (sJoystick == nullptr) {
++        SDL_Log("[BrawlerPad] virtual touch controller open failed: %s", SDL_GetError());
++        SDL_JoystickDetachVirtual(sDeviceIndex);
++        sDeviceIndex = -1;
++        return false;
++    }
++    sTouchInstanceId = SDL_JoystickInstanceID(sJoystick);
++    // SDL's Xbox mapping expects raw triggers to rest at -32768. Virtual
++    // axes otherwise start at zero, which reads as a half-pressed Z and R.
++    SDL_JoystickSetVirtualAxis(sJoystick, SDL_CONTROLLER_AXIS_TRIGGERLEFT, -32768);
++    SDL_JoystickSetVirtualAxis(sJoystick, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, -32768);
++    SDL_Log("[BrawlerPad] touch controller attached as SDL joystick %d (instance %d)",
++            sDeviceIndex, static_cast<int>(sTouchInstanceId));
++    return true;
++}
++
++void SetButton(int button, bool down) {
++    std::lock_guard<std::mutex> lock(sJoystickMutex);
++    if (sJoystick != nullptr && button >= 0 && button < SDL_CONTROLLER_BUTTON_MAX) {
++        SDL_JoystickSetVirtualButton(sJoystick, button, down ? 1 : 0);
++    }
++}
++
++void SetAxis(int axis, int value) {
++    std::lock_guard<std::mutex> lock(sJoystickMutex);
++    if (sJoystick != nullptr && axis >= 0 && axis < SDL_CONTROLLER_AXIS_MAX) {
++        SDL_JoystickSetVirtualAxis(sJoystick, axis,
++                                   static_cast<Sint16>(std::clamp(value, -32768, 32767)));
++    }
++}
++
++void SetCDirection(int direction, bool down) {
++    switch (direction) {
++        case 0: sCUp = down; break;
++        case 1: sCDown = down; break;
++        case 2: sCLeft = down; break;
++        case 3: sCRight = down; break;
++        default: return;
++    }
++    const int x = (sCRight ? 32767 : 0) + (sCLeft ? -32768 : 0);
++    const int y = (sCDown ? 32767 : 0) + (sCUp ? -32768 : 0);
++    SetAxis(SDL_CONTROLLER_AXIS_RIGHTX, x);
++    SetAxis(SDL_CONTROLLER_AXIS_RIGHTY, y);
++}
++
++} // namespace
++
++typedef NS_ENUM(NSInteger, BPInputKind) {
++    BPInputButton,
++    BPInputTrigger,
++    BPInputCDirection,
++};
++
++@interface BrawlerPadTouchButton : UIButton
++@property(nonatomic) BPInputKind inputKind;
++@property(nonatomic) int inputCode;
++@property(nonatomic) BOOL inputPressed;
++@property(nonatomic) BOOL layoutEditing;
++@property(nonatomic) BOOL pill;
++@property(nonatomic, strong) UIColor* idleColor;
++@property(nonatomic, strong) UIColor* pressedColor;
++- (instancetype)initWithLabel:(NSString*)label kind:(BPInputKind)kind code:(int)code pill:(BOOL)pill;
++- (void)setPressed:(BOOL)pressed;
++- (void)cancelInput;
++@end
++
++@implementation BrawlerPadTouchButton
++- (instancetype)initWithLabel:(NSString*)label kind:(BPInputKind)kind code:(int)code pill:(BOOL)pill {
++    self = [super initWithFrame:CGRectZero];
++    if (self) {
++        self.inputKind = kind;
++        self.inputCode = code;
++        self.pill = pill;
++        self.multipleTouchEnabled = YES;
++        self.idleColor = [UIColor colorWithWhite:0.04 alpha:0.54];
++        self.pressedColor = [UIColor colorWithWhite:0.78 alpha:0.78];
++        self.backgroundColor = self.idleColor;
++        self.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.72].CGColor;
++        self.layer.borderWidth = 2.0;
++        [self setTitle:label forState:UIControlStateNormal];
++        [self setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
++        self.titleLabel.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightBold];
++        self.accessibilityLabel = label;
++        [self addTarget:self action:@selector(inputDown) forControlEvents:UIControlEventTouchDown | UIControlEventTouchDragEnter];
++        [self addTarget:self action:@selector(inputUp) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit];
++    }
++    return self;
++}
++- (void)layoutSubviews {
++    [super layoutSubviews];
++    self.layer.cornerRadius = self.pill ? CGRectGetHeight(self.bounds) * 0.48
++                                        : MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) * 0.5;
++}
++- (void)setPressed:(BOOL)pressed {
++    if (self.inputPressed == pressed || self.layoutEditing) return;
++    self.inputPressed = pressed;
++    self.backgroundColor = pressed ? self.pressedColor : self.idleColor;
++    switch (self.inputKind) {
++        case BPInputButton: SetButton(self.inputCode, pressed); break;
++        case BPInputTrigger: SetAxis(self.inputCode, pressed ? 32767 : -32768); break;
++        case BPInputCDirection: SetCDirection(self.inputCode, pressed); break;
++    }
++}
++- (void)inputDown { [self setPressed:YES]; }
++- (void)inputUp { [self setPressed:NO]; }
++- (void)cancelInput {
++    BOOL editing = self.layoutEditing;
++    self.layoutEditing = NO;
++    [self setPressed:NO];
++    self.layoutEditing = editing;
++}
++@end
++
++@interface BrawlerPadTouchStick : UIView
++@property(nonatomic, strong) UIView* knob;
++@property(nonatomic) BOOL layoutEditing;
++@property(nonatomic) BOOL inputTracking;
++- (BOOL)tracking;
++- (void)updatePoint:(CGPoint)point;
++- (void)cancelInput;
++@end
++
++@implementation BrawlerPadTouchStick
++- (instancetype)initWithFrame:(CGRect)frame {
++    self = [super initWithFrame:frame];
++    if (self) {
++        self.backgroundColor = [UIColor colorWithWhite:0.04 alpha:0.45];
++        self.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.58].CGColor;
++        self.layer.borderWidth = 2.0;
++        self.accessibilityLabel = @"Analog Stick";
++        self.isAccessibilityElement = YES;
++        self.knob = [[UIView alloc] initWithFrame:CGRectZero];
++        self.knob.userInteractionEnabled = NO;
++        self.knob.backgroundColor = [UIColor colorWithRed:0.30 green:0.62 blue:0.94 alpha:0.80];
++        self.knob.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.72].CGColor;
++        self.knob.layer.borderWidth = 2.0;
++        [self addSubview:self.knob];
++    }
++    return self;
++}
++- (void)layoutSubviews {
++    [super layoutSubviews];
++    CGFloat side = MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
++    self.layer.cornerRadius = side * 0.5;
++    self.knob.bounds = CGRectMake(0, 0, side * 0.42, side * 0.42);
++    self.knob.layer.cornerRadius = side * 0.21;
++    if (![self tracking]) self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
++}
++- (BOOL)tracking { return self.inputTracking; }
++- (void)updatePoint:(CGPoint)point {
++    if (self.layoutEditing) return;
++    CGPoint center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
++    CGFloat radius = MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) * 0.34;
++    CGFloat dx = point.x - center.x;
++    CGFloat dy = point.y - center.y;
++    CGFloat distance = hypot(dx, dy);
++    if (distance > radius && distance > 0) { dx *= radius / distance; dy *= radius / distance; distance = radius; }
++    self.knob.center = CGPointMake(center.x + dx, center.y + dy);
++
++    // Circular deadzone with the remaining travel remapped to the full SDL
++    // range. This preserves continuous angles and full diagonal magnitude.
++    CGFloat magnitude = radius > 0 ? distance / radius : 0;
++    const CGFloat deadzone = 0.12;
++    CGFloat output = magnitude <= deadzone ? 0 : (magnitude - deadzone) / (1.0 - deadzone);
++    CGFloat nx = distance > 0 ? dx / distance * output : 0;
++    CGFloat ny = distance > 0 ? dy / distance * output : 0;
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTX, static_cast<int>(lround(nx * 32767.0)));
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTY, static_cast<int>(lround(ny * 32767.0)));
++}
++- (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { self.inputTracking=YES; [self updatePoint:[touches.anyObject locationInView:self]]; }
++- (void)touchesMoved:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self updatePoint:[touches.anyObject locationInView:self]]; }
++- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self cancelInput]; }
++- (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self cancelInput]; }
++- (void)cancelInput {
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTX, 0);
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTY, 0);
++    self.inputTracking=NO;
++    self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
++}
++@end
++
++@interface BrawlerPadTouchOverlay : UIView
++@property(nonatomic, strong) BrawlerPadTouchStick* stick;
++@property(nonatomic, strong) NSArray<BrawlerPadTouchButton*>* buttons;
++@property(nonatomic, strong) NSArray<UIView*>* controls;
++@property(nonatomic, strong) NSMutableDictionary<NSString*, NSArray<NSNumber*>*>* centers;
++@property(nonatomic, strong) NSMutableDictionary<NSString*, NSNumber*>* scales;
++@property(nonatomic, strong) NSMutableSet<NSString*>* hiddenControls;
++@property(nonatomic, strong) NSMutableDictionary<NSString*, NSValue*>* defaultSizes;
++@property(nonatomic, copy) NSString* profile;
++@property(nonatomic) BOOL layoutEditing;
++@property(nonatomic, strong) UIView* selectedControl;
++@property(nonatomic, strong) UIView* editorPanel;
++@property(nonatomic, strong) UILabel* editorLabel;
++@property(nonatomic, strong) UISlider* sizeSlider;
++@property(nonatomic, strong) UIButton* visibilityButton;
++@property(nonatomic, strong) NSMutableArray<UIGestureRecognizer*>* editGestures;
++- (void)cancelAllInputs;
++- (void)beginEditing;
++- (void)endEditing;
++- (UIView*)control:(NSString*)identifier;
++- (BOOL)isCompact;
++- (NSString*)storageKey;
++- (void)loadProfile;
++- (void)layoutDefaults;
++- (void)clampControl:(UIView*)view;
++- (void)layoutEditorPanel;
++- (void)installEditor;
++- (void)select:(UIView*)view;
++@end
++
++@implementation BrawlerPadTouchOverlay
++- (BrawlerPadTouchButton*)button:(NSString*)label kind:(BPInputKind)kind code:(int)code id:(NSString*)identifier pill:(BOOL)pill {
++    BrawlerPadTouchButton* b = [[BrawlerPadTouchButton alloc] initWithLabel:label kind:kind code:code pill:pill];
++    b.accessibilityIdentifier = identifier;
++    return b;
++}
++- (instancetype)initWithFrame:(CGRect)frame {
++    self = [super initWithFrame:frame];
++    if (!self) return nil;
++    self.backgroundColor = UIColor.clearColor;
++    self.multipleTouchEnabled = YES;
++    self.stick = [[BrawlerPadTouchStick alloc] initWithFrame:CGRectZero];
++    self.stick.accessibilityIdentifier = @"stick";
++    BrawlerPadTouchButton* a = [self button:@"A" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_A id:@"a" pill:NO];
++    BrawlerPadTouchButton* b = [self button:@"B" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_B id:@"b" pill:NO];
++    BrawlerPadTouchButton* z = [self button:@"Z" kind:BPInputTrigger code:SDL_CONTROLLER_AXIS_TRIGGERLEFT id:@"z" pill:NO];
++    BrawlerPadTouchButton* l = [self button:@"L" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_LEFTSHOULDER id:@"l" pill:YES];
++    BrawlerPadTouchButton* r = [self button:@"R" kind:BPInputTrigger code:SDL_CONTROLLER_AXIS_TRIGGERRIGHT id:@"r" pill:YES];
++    BrawlerPadTouchButton* start = [self button:@"START" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_START id:@"start" pill:YES];
++    NSArray* d = @[
++        [self button:@"▲" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_UP id:@"d-up" pill:NO],
++        [self button:@"▼" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_DOWN id:@"d-down" pill:NO],
++        [self button:@"◀" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_LEFT id:@"d-left" pill:NO],
++        [self button:@"▶" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_RIGHT id:@"d-right" pill:NO]
++    ];
++    NSArray* c = @[
++        [self button:@"C▲" kind:BPInputCDirection code:0 id:@"c-up" pill:NO],
++        [self button:@"C▼" kind:BPInputCDirection code:1 id:@"c-down" pill:NO],
++        [self button:@"C◀" kind:BPInputCDirection code:2 id:@"c-left" pill:NO],
++        [self button:@"C▶" kind:BPInputCDirection code:3 id:@"c-right" pill:NO]
++    ];
++    self.buttons = [@[a, b, z, l, r, start] arrayByAddingObjectsFromArray:[d arrayByAddingObjectsFromArray:c]];
++    self.controls = [@[self.stick] arrayByAddingObjectsFromArray:self.buttons];
++    self.centers = [NSMutableDictionary dictionary];
++    self.scales = [NSMutableDictionary dictionary];
++    self.hiddenControls = [NSMutableSet set];
++    self.defaultSizes = [NSMutableDictionary dictionary];
++    self.editGestures = [NSMutableArray array];
++    [self addSubview:self.stick];
++    for (BrawlerPadTouchButton* button in self.buttons) [self addSubview:button];
++
++    a.idleColor = [UIColor colorWithRed:0.08 green:0.40 blue:0.90 alpha:0.66];
++    b.idleColor = [UIColor colorWithRed:0.06 green:0.58 blue:0.24 alpha:0.66];
++    for (BrawlerPadTouchButton* button in c) button.idleColor = [UIColor colorWithRed:0.94 green:0.66 blue:0.08 alpha:0.66];
++    for (BrawlerPadTouchButton* button in self.buttons) button.backgroundColor = button.idleColor;
++    [self installEditor];
++    return self;
++}
++- (UIView*)hitTest:(CGPoint)point withEvent:(UIEvent*)event {
++    UIView* hit = [super hitTest:point withEvent:event];
++    return hit == self ? nil : hit;
++}
++- (UIView*)control:(NSString*)identifier {
++    for (UIView* view in self.controls) if ([view.accessibilityIdentifier isEqualToString:identifier]) return view;
++    return nil;
++}
++- (void)setFrameFor:(NSString*)identifier center:(CGPoint)center size:(CGSize)size {
++    UIView* view = [self control:identifier];
++    view.bounds = CGRectMake(0, 0, size.width, size.height);
++    view.center = center;
++}
++- (BOOL)isCompact { return MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) < 600.0; }
++- (NSString*)profileName { return [self isCompact] ? @"phone-v1" : @"tablet-v1"; }
++- (NSString*)storageKey { return [@"BrawlerPad.TouchLayout." stringByAppendingString:self.profile ?: [self profileName]]; }
++- (void)loadProfile {
++    NSString* next = [self profileName];
++    if ([self.profile isEqualToString:next]) return;
++    self.profile = next;
++    [self.centers removeAllObjects]; [self.scales removeAllObjects]; [self.hiddenControls removeAllObjects];
++    NSDictionary* stored = [NSUserDefaults.standardUserDefaults dictionaryForKey:self.storageKey];
++    if ([stored[@"centers"] isKindOfClass:NSDictionary.class]) [self.centers addEntriesFromDictionary:stored[@"centers"]];
++    if ([stored[@"scales"] isKindOfClass:NSDictionary.class]) [self.scales addEntriesFromDictionary:stored[@"scales"]];
++    if ([stored[@"hidden"] isKindOfClass:NSArray.class]) [self.hiddenControls addObjectsFromArray:stored[@"hidden"]];
++}
++- (void)layoutDefaults {
++    UIEdgeInsets safe = self.safeAreaInsets;
++    CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
++    BOOL compact = [self isCompact];
++    CGFloat unit = compact ? 46.0 : 62.0;
++    CGFloat stickSize = compact ? 122.0 : 168.0;
++    CGPoint left = CGPointMake(safe.left + (compact ? 92.0 : 132.0), h - safe.bottom - (compact ? 82.0 : 118.0));
++    CGPoint right = CGPointMake(w - safe.right - (compact ? 78.0 : 128.0), h - safe.bottom - (compact ? 78.0 : 112.0));
++    [self setFrameFor:@"stick" center:left size:CGSizeMake(stickSize, stickSize)];
++    [self setFrameFor:@"a" center:CGPointMake(right.x + unit * .40, right.y + unit * .18) size:CGSizeMake(unit * 1.18, unit * 1.18)];
++    [self setFrameFor:@"b" center:CGPointMake(right.x - unit * .85, right.y + unit * .22) size:CGSizeMake(unit, unit)];
++    [self setFrameFor:@"z" center:CGPointMake(right.x - unit * .15, right.y - unit * 1.05) size:CGSizeMake(unit, unit)];
++    CGFloat top = safe.top + (compact ? 34.0 : 48.0);
++    [self setFrameFor:@"l" center:CGPointMake(safe.left + (compact ? 60.0 : 90.0), top) size:CGSizeMake(unit * 1.55, unit * .72)];
++    [self setFrameFor:@"start" center:CGPointMake(w * .5, top) size:CGSizeMake(unit * 1.55, unit * .68)];
++    [self setFrameFor:@"r" center:CGPointMake(w - safe.right - (compact ? 60.0 : 90.0), top) size:CGSizeMake(unit * 1.55, unit * .72)];
++    CGFloat dUnit = unit * .68, dRadius = unit * .72;
++    CGPoint dc = CGPointMake(left.x - (compact ? 18.0 : 26.0), left.y - stickSize * .78);
++    [self setFrameFor:@"d-up" center:CGPointMake(dc.x, dc.y-dRadius) size:CGSizeMake(dUnit,dUnit)];
++    [self setFrameFor:@"d-down" center:CGPointMake(dc.x, dc.y+dRadius) size:CGSizeMake(dUnit,dUnit)];
++    [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius, dc.y) size:CGSizeMake(dUnit,dUnit)];
++    [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius, dc.y) size:CGSizeMake(dUnit,dUnit)];
++    CGFloat cUnit = unit * .72, cRadius = unit * .78;
++    CGPoint cc = CGPointMake(right.x, right.y - stickSize * .95);
++    [self setFrameFor:@"c-up" center:CGPointMake(cc.x, cc.y-cRadius) size:CGSizeMake(cUnit,cUnit)];
++    [self setFrameFor:@"c-down" center:CGPointMake(cc.x, cc.y+cRadius) size:CGSizeMake(cUnit,cUnit)];
++    [self setFrameFor:@"c-left" center:CGPointMake(cc.x-cRadius, cc.y) size:CGSizeMake(cUnit,cUnit)];
++    [self setFrameFor:@"c-right" center:CGPointMake(cc.x+cRadius, cc.y) size:CGSizeMake(cUnit,cUnit)];
++}
++- (void)clampControl:(UIView*)view {
++    UIEdgeInsets s = self.safeAreaInsets;
++    CGFloat x = std::clamp(view.center.x, s.left + view.bounds.size.width/2 + 3, CGRectGetWidth(self.bounds)-s.right-view.bounds.size.width/2-3);
++    CGFloat y = std::clamp(view.center.y, s.top + view.bounds.size.height/2 + 3, CGRectGetHeight(self.bounds)-s.bottom-view.bounds.size.height/2-3);
++    view.center = CGPointMake(x,y);
++}
++- (void)layoutSubviews {
++    [super layoutSubviews];
++    [self loadProfile];
++    [self layoutDefaults];
++    [self.defaultSizes removeAllObjects];
++    CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
++    for (UIView* view in self.controls) {
++        NSString* key = view.accessibilityIdentifier;
++        CGSize base = view.bounds.size;
++        self.defaultSizes[key] = [NSValue valueWithCGSize:base];
++        CGFloat scale = self.scales[key] ? std::clamp(self.scales[key].doubleValue, .70, 1.50) : 1.0;
++        view.bounds = CGRectMake(0,0,base.width*scale,base.height*scale);
++        NSArray<NSNumber*>* p = self.centers[key];
++        if (p.count == 2) view.center = CGPointMake(p[0].doubleValue*w,p[1].doubleValue*h);
++        [self clampControl:view];
++        BOOL hidden = [self.hiddenControls containsObject:key];
++        view.hidden = self.layoutEditing ? NO : hidden;
++        view.alpha = self.layoutEditing ? (hidden ? .28 : 1.0) : sOpacity.load();
++        view.layer.shadowColor = [UIColor colorWithRed:1 green:.78 blue:.16 alpha:1].CGColor;
++        view.layer.shadowOpacity = self.layoutEditing && view == self.selectedControl ? 1 : 0;
++        view.layer.shadowRadius = 8;
++        view.layer.shadowOffset = CGSizeZero;
++    }
++    [self layoutEditorPanel];
++    [self bringSubviewToFront:self.editorPanel];
++}
++- (UIButton*)editorButton:(NSString*)title action:(SEL)action {
++    UIButton* b = [UIButton buttonWithType:UIButtonTypeSystem];
++    [b setTitle:title forState:UIControlStateNormal]; [b setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
++    b.backgroundColor = [UIColor colorWithWhite:1 alpha:.14]; b.layer.cornerRadius = 9;
++    b.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
++    [b addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
++    return b;
++}
++- (void)installEditor {
++    self.editorPanel = [[UIView alloc] initWithFrame:CGRectZero];
++    self.editorPanel.backgroundColor = [UIColor colorWithWhite:.03 alpha:.92];
++    self.editorPanel.layer.cornerRadius = 14; self.editorPanel.hidden = YES;
++    self.editorLabel = [[UILabel alloc] initWithFrame:CGRectZero]; self.editorLabel.textColor = UIColor.whiteColor;
++    self.editorLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold]; [self.editorPanel addSubview:self.editorLabel];
++    self.sizeSlider = [[UISlider alloc] initWithFrame:CGRectZero]; self.sizeSlider.minimumValue=.70; self.sizeSlider.maximumValue=1.50;
++    [self.sizeSlider addTarget:self action:@selector(sizeChanged:) forControlEvents:UIControlEventValueChanged]; [self.editorPanel addSubview:self.sizeSlider];
++    self.visibilityButton = [self editorButton:@"Hide" action:@selector(toggleVisibility)];
++    UIButton* reset = [self editorButton:@"Reset" action:@selector(resetLayout)];
++    UIButton* done = [self editorButton:@"Done" action:@selector(endEditing)]; done.backgroundColor=[UIColor colorWithRed:.10 green:.48 blue:.92 alpha:.9];
++    for (UIButton* b in @[self.visibilityButton,reset,done]) [self.editorPanel addSubview:b];
++    [self addSubview:self.editorPanel];
++    for (UIView* view in self.controls) {
++        UIPanGestureRecognizer* pan=[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(move:)]; pan.enabled=NO;
++        UITapGestureRecognizer* tap=[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(selectGesture:)]; tap.enabled=NO;
++        [view addGestureRecognizer:pan]; [view addGestureRecognizer:tap]; [self.editGestures addObjectsFromArray:@[pan,tap]];
++    }
++}
++- (void)layoutEditorPanel {
++    if (self.editorPanel.hidden) return;
++    UIEdgeInsets s=self.safeAreaInsets; CGFloat w=CGRectGetWidth(self.bounds); BOOL compact=[self isCompact];
++    CGFloat pw=MIN(w-s.left-s.right-12,compact?590:760), ph=compact?52:70;
++    self.editorPanel.frame=CGRectMake((w-pw)/2,s.top+5,pw,ph);
++    CGFloat inset=6,gap=5,bw=compact?54:68,labelW=compact?95:130;
++    self.editorLabel.frame=CGRectMake(inset,inset,labelW,ph-2*inset);
++    CGFloat buttons=3*bw+2*gap; self.sizeSlider.frame=CGRectMake(inset+labelW+gap,inset,pw-2*inset-labelW-gap-buttons-gap,ph-2*inset);
++    CGFloat x=pw-inset-buttons; for (UIView* b in [self.editorPanel subviews]) if ([b isKindOfClass:UIButton.class]) { b.frame=CGRectMake(x,inset,bw,ph-2*inset); x+=bw+gap; }
++}
++- (void)select:(UIView*)view {
++    if (!self.layoutEditing || !view) return; self.selectedControl=view;
++    self.editorLabel.text=[NSString stringWithFormat:@"%@ • Drag • Size",view.accessibilityLabel ?: view.accessibilityIdentifier];
++    self.sizeSlider.value=self.scales[view.accessibilityIdentifier]?self.scales[view.accessibilityIdentifier].floatValue:1;
++    BOOL hidden=[self.hiddenControls containsObject:view.accessibilityIdentifier]; [self.visibilityButton setTitle:hidden?@"Show":@"Hide" forState:UIControlStateNormal];
++    self.visibilityButton.enabled=![view.accessibilityIdentifier isEqualToString:@"stick"]; self.visibilityButton.alpha=self.visibilityButton.enabled?1:.35;
++    [self setNeedsLayout];
++}
++- (void)selectGesture:(UITapGestureRecognizer*)g { [self select:g.view]; }
++- (void)move:(UIPanGestureRecognizer*)g {
++    if (!self.layoutEditing) return; UIView* v=g.view; if (g.state==UIGestureRecognizerStateBegan) [self select:v];
++    CGPoint p=[g translationInView:self]; v.center=CGPointMake(v.center.x+p.x,v.center.y+p.y); [g setTranslation:CGPointZero inView:self]; [self clampControl:v];
++    self.centers[v.accessibilityIdentifier]=@[@(v.center.x/CGRectGetWidth(self.bounds)),@(v.center.y/CGRectGetHeight(self.bounds))];
++}
++- (void)sizeChanged:(UISlider*)slider {
++    UIView* v=self.selectedControl; NSValue* value=self.defaultSizes[v.accessibilityIdentifier]; if (!v||!value) return;
++    self.scales[v.accessibilityIdentifier]=@(slider.value); CGSize base=value.CGSizeValue; v.bounds=CGRectMake(0,0,base.width*slider.value,base.height*slider.value); [self clampControl:v];
++}
++- (void)toggleVisibility {
++    NSString* key=self.selectedControl.accessibilityIdentifier; if (!key||[key isEqualToString:@"stick"]) return;
++    if ([self.hiddenControls containsObject:key]) [self.hiddenControls removeObject:key]; else [self.hiddenControls addObject:key]; [self select:self.selectedControl];
++}
++- (void)resetLayout {
++    [self.centers removeAllObjects]; [self.scales removeAllObjects]; [self.hiddenControls removeAllObjects];
++    [NSUserDefaults.standardUserDefaults removeObjectForKey:[self storageKey]]; [self setNeedsLayout]; [self select:[self control:@"a"]];
++}
++- (void)cancelAllInputs { [self.stick cancelInput]; for (BrawlerPadTouchButton* b in self.buttons) [b cancelInput]; }
++- (void)beginEditing {
++    if (self.layoutEditing) return; [self cancelAllInputs]; self.layoutEditing=YES; self.editorPanel.hidden=NO;
++    self.stick.layoutEditing=YES; for (BrawlerPadTouchButton* b in self.buttons) b.layoutEditing=YES; for (UIGestureRecognizer* g in self.editGestures) g.enabled=YES;
++    [self select:[self control:@"a"]]; [self setNeedsLayout];
++}
++- (void)endEditing {
++    if (!self.layoutEditing) return;
++    NSDictionary* stored=@{@"centers":[self.centers copy],@"scales":[self.scales copy],@"hidden":self.hiddenControls.allObjects};
++    [NSUserDefaults.standardUserDefaults setObject:stored forKey:[self storageKey]]; self.layoutEditing=NO; self.editorPanel.hidden=YES; self.selectedControl=nil;
++    self.stick.layoutEditing=NO; for (BrawlerPadTouchButton* b in self.buttons) b.layoutEditing=NO; for (UIGestureRecognizer* g in self.editGestures) g.enabled=NO; [self setNeedsLayout];
++}
++@end
++
++static BrawlerPadTouchOverlay* sOverlay;
++static UIButton* sMenuButton;
++
++@interface UIApplication (BrawlerPadTouchMenu)
++- (void)brawlerPadToggleMenu;
++@end
++
++UIWindow* ActiveWindow() {
++    for (UIScene* scene in UIApplication.sharedApplication.connectedScenes) {
++        if (![scene isKindOfClass:UIWindowScene.class]) continue;
++        for (UIWindow* window in ((UIWindowScene*)scene).windows) if (window.isKeyWindow) return window;
++    }
++    return nil;
++}
++
++void QueueMenuToggle() { sMenuTogglePending.store(true); }
++
++void InstallMenuButton(UIWindow* window) {
++    if (!sMenuButton) {
++        sMenuButton=[UIButton buttonWithType:UIButtonTypeSystem]; [sMenuButton setTitle:@"•••" forState:UIControlStateNormal];
++        [sMenuButton setTitleColor:UIColor.whiteColor forState:UIControlStateNormal]; sMenuButton.backgroundColor=[UIColor colorWithWhite:.03 alpha:.62];
++        sMenuButton.layer.borderColor=[UIColor colorWithWhite:1 alpha:.58].CGColor; sMenuButton.layer.borderWidth=1.5; sMenuButton.accessibilityLabel=@"BrawlerPad menu";
++        [sMenuButton addTarget:UIApplication.sharedApplication action:@selector(brawlerPadToggleMenu) forControlEvents:UIControlEventTouchUpInside];
++    }
++    CGFloat size=44, w=CGRectGetWidth(window.bounds); UIEdgeInsets safe=window.safeAreaInsets;
++    sMenuButton.frame=CGRectMake(w-safe.right-size-8,safe.top+8,size,size); sMenuButton.layer.cornerRadius=size/2; sMenuButton.alpha=sOpacity.load();
++    if (sMenuButton.superview!=window) { [sMenuButton removeFromSuperview]; [window addSubview:sMenuButton]; }
++    [window bringSubviewToFront:sMenuButton];
++}
++
++@implementation UIApplication (BrawlerPadTouchMenu)
++- (void)brawlerPadToggleMenu { QueueMenuToggle(); }
++@end
++
++void InstallLifecycleObservers() {
++    if (sLifecycleObserversInstalled) return; sLifecycleObserversInstalled=YES;
++    for (NSNotificationName name in @[UIApplicationWillResignActiveNotification,UIApplicationDidEnterBackgroundNotification]) {
++        [NSNotificationCenter.defaultCenter addObserverForName:name object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification* note){ (void)note; [sOverlay cancelAllInputs]; }];
++    }
++}
++
++void ApplyState() {
++    UIWindow* window=ActiveWindow();
++    if (!window) { dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_MSEC*200),dispatch_get_main_queue(),^{ ApplyState(); }); return; }
++    InstallMenuButton(window);
++    BOOL gameplayVisible=sEnabled.load() && !sMenuVisible.load() && !(sHideForController.load() && sPhysicalControllerConnected.load());
++    SDL_Log("[BrawlerPad] touch state enabled=%d menu=%d hideWithController=%d physical=%d gameplay=%d editor=%d",
++            sEnabled.load(), sMenuVisible.load(), sHideForController.load(),
++            sPhysicalControllerConnected.load(), gameplayVisible, sEditorRequested);
++    if (!gameplayVisible && !sEditorRequested) {
++        [sOverlay cancelAllInputs]; [sOverlay removeFromSuperview]; sOverlay=nil; return;
++    }
++    if (!sOverlay) { sOverlay=[[BrawlerPadTouchOverlay alloc] initWithFrame:window.bounds]; sOverlay.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; }
++    if (sOverlay.superview!=window) { sOverlay.frame=window.bounds; [window addSubview:sOverlay]; }
++    if (sEditorRequested && !sMenuVisible.load()) { sEditorRequested=NO; [sOverlay beginEditing]; }
++    [sOverlay setNeedsLayout]; [window bringSubviewToFront:sOverlay]; if (!sOverlay.layoutEditing) [window bringSubviewToFront:sMenuButton];
++}
++
++bool HasPhysicalController() {
++    for (int i=0;i<SDL_NumJoysticks();++i) {
++        if (SDL_JoystickGetDeviceInstanceID(i) == sTouchInstanceId) continue;
++        if (!SDL_JoystickIsVirtual(i) && SDL_IsGameController(i)) return true;
++    }
++    return false;
++}
++
++extern "C" {
++int BrawlerPadTouchControlsAvailable(void) { return 1; }
++void BrawlerPadTouchControlsInitialize(void) { AttachVirtualController(); }
++int BrawlerPadTouchControlsGetControllerInstanceId(void) { return static_cast<int>(sTouchInstanceId); }
++void BrawlerPadTouchControlsSetEnabled(int enabled) {
++    sEnabled.store(enabled!=0); SDL_Log("[BrawlerPad] set touch enabled=%d", enabled!=0);
++    dispatch_async(dispatch_get_main_queue(),^{ InstallLifecycleObservers(); ApplyState(); });
++}
++void BrawlerPadTouchControlsSetHideWhenControllerConnected(int enabled) {
++    sHideForController.store(enabled!=0); dispatch_async(dispatch_get_main_queue(),^{ ApplyState(); });
++}
++void BrawlerPadTouchControlsSetOpacity(float opacity) {
++    sOpacity.store(std::clamp(opacity,.25f,1.0f)); dispatch_async(dispatch_get_main_queue(),^{ ApplyState(); });
++}
++void BrawlerPadTouchControlsBeginEditing(void) {
++    dispatch_async(dispatch_get_main_queue(),^{ sEditorRequested=YES; if (sMenuVisible.load()) QueueMenuToggle(); else ApplyState(); });
++}
++void BrawlerPadTouchControlsFrameUpdate(int menuVisible) {
++    bool physical=HasPhysicalController(); bool oldPhysical=sPhysicalControllerConnected.exchange(physical); bool visible=menuVisible!=0; bool oldMenu=sMenuVisible.exchange(visible);
++    if (physical!=oldPhysical) {
++        SDL_Log("[BrawlerPad] physical controller state changed to %d; %d SDL joysticks", physical, SDL_NumJoysticks());
++        for (int i=0;i<SDL_NumJoysticks();++i) {
++            SDL_Log("[BrawlerPad] joystick %d name='%s' instance=%d virtual=%d gamecontroller=%d",
++                    i, SDL_JoystickNameForIndex(i) ?: "(unnamed)",
++                    static_cast<int>(SDL_JoystickGetDeviceInstanceID(i)),
++                    SDL_JoystickIsVirtual(i), SDL_IsGameController(i));
++        }
++    }
++    if (physical!=oldPhysical || visible!=oldMenu) dispatch_async(dispatch_get_main_queue(),^{ ApplyState(); });
++}
++int BrawlerPadTouchControlsDrainMenuToggle(void) { return sMenuTogglePending.exchange(false)?1:0; }
++void BrawlerPadTouchControlsShutdown(void) {
++    void (^cleanup)(void)=^{ [sOverlay cancelAllInputs]; [sOverlay removeFromSuperview]; sOverlay=nil; [sMenuButton removeFromSuperview]; sMenuButton=nil; };
++    if (NSThread.isMainThread) cleanup(); else dispatch_sync(dispatch_get_main_queue(),cleanup);
++    std::lock_guard<std::mutex> lock(sJoystickMutex);
++    if (sJoystick) { SDL_JoystickClose(sJoystick); sJoystick=nullptr; }
++    sTouchInstanceId=-1;
++    if (sDeviceIndex>=0) { SDL_JoystickDetachVirtual(sDeviceIndex); sDeviceIndex=-1; }
++    sCUp=sCDown=sCLeft=sCRight=false;
++}
++}
++
++#endif
+
