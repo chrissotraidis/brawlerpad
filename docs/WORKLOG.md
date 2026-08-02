@@ -208,3 +208,7 @@
   sorted fixed-timestamp ZIP generator and removed the linker's random UUID
   from the unsigned proof executable. Primary and clean-checkout executable,
   shader archive, and IPA hashes then matched exactly.
+- Hardened `clone-sources.sh` idempotence with content-addressed per-patch
+  stamps stored inside ignored upstream Git metadata. A migration check records
+  already-complete pre-stamp trees, and two consecutive reruns then completed
+  without altering or reapplying the ordered source delta.

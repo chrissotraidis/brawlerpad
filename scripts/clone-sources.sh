@@ -30,6 +30,16 @@ clone_at_pin() {
 apply_patch_once() {
     local checkout="$1"
     local patch_file="$2"
+    local patch_digest
+    local stamp
+
+    patch_digest="$(shasum -a 256 "$patch_file" | awk '{print $1}')"
+    stamp="$(git -C "$checkout" rev-parse --absolute-git-dir)/brawlerpad-patch-$patch_digest"
+
+    if [ -f "$stamp" ]; then
+        echo "Patch already applied: $patch_file"
+        return
+    fi
 
     if git -C "$checkout" apply --check "$patch_file" >/dev/null 2>&1; then
         git -C "$checkout" apply "$patch_file"
@@ -39,12 +49,45 @@ apply_patch_once() {
         echo "Patch does not apply cleanly: $patch_file" >&2
         exit 1
     fi
+
+    touch "$stamp"
+}
+
+mark_patch_applied() {
+    local checkout="$1"
+    local patch_file="$2"
+    local patch_digest
+
+    patch_digest="$(shasum -a 256 "$patch_file" | awk '{print $1}')"
+    touch "$(git -C "$checkout" rev-parse --absolute-git-dir)/brawlerpad-patch-$patch_digest"
 }
 
 clone_at_pin "$BATTLESHIP_REPO" "$BRAWLERPAD_REF/BattleShip" "$BATTLESHIP_PIN"
 git -C "$BRAWLERPAD_REF/BattleShip" submodule update --init --recursive
 git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
     'git config remote.origin.pushurl disabled://brawlerpad-reference-input'
+
+# Older BrawlerPad checkouts predate per-patch stamps. If the terminal patch
+# in every patched repository is already present, migrate that known-complete
+# tree once. This avoids asking an early patch to reverse-apply through later
+# edits to the same CMake or source context.
+if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
+       "$BRAWLERPAD_ROOT/patches/battleship/0009-reproducible-device-link.patch" >/dev/null 2>&1 &&
+   git -C "$BRAWLERPAD_REF/BattleShip/libultraship" apply --reverse --check \
+       "$BRAWLERPAD_ROOT/patches/libultraship/0003-ios-lifecycle-audio.patch" >/dev/null 2>&1 &&
+   git -C "$BRAWLERPAD_REF/BattleShip/decomp" apply --reverse --check \
+       "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch" >/dev/null 2>&1; then
+    for patch_file in "$BRAWLERPAD_ROOT"/patches/battleship/*.patch; do
+        mark_patch_applied "$BRAWLERPAD_REF/BattleShip" "$patch_file"
+    done
+    for patch_file in "$BRAWLERPAD_ROOT"/patches/libultraship/*.patch; do
+        mark_patch_applied "$BRAWLERPAD_REF/BattleShip/libultraship" "$patch_file"
+    done
+    for patch_file in "$BRAWLERPAD_ROOT"/patches/decomp/*.patch; do
+        mark_patch_applied "$BRAWLERPAD_REF/BattleShip/decomp" "$patch_file"
+    done
+fi
+
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/decomp" \
     "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
