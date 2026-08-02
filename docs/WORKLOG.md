@@ -211,4 +211,6 @@
 - Hardened `clone-sources.sh` idempotence with content-addressed per-patch
   stamps stored inside ignored upstream Git metadata. A migration check records
   already-complete pre-stamp trees, and two consecutive reruns then completed
-  without altering or reapplying the ordered source delta.
+  without altering or reapplying the ordered source delta. A second brand-new
+  repository clone also applied the full series on its first invocation and
+  recognized every patch on its second.
