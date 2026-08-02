@@ -192,12 +192,18 @@ or a shader archive over 1 MiB.
 
 Two independently created IPAs were byte-identical. The accepted unsigned
 `BrawlerPad-0.1.0-preview.1-unsigned.ipa` is 3.4 MiB with SHA-256
-`4b6bf1daa3356930d136adecd683ae60d7a9914140a9009b78d72b2d14445466`;
+`d7e4d1806b05b999ccb1d03344a3e1b89aefd014d00bf52a3088fd0d7dd5672b`;
 the contained executable has SHA-256
-`6e880f74fd1908d42dd620e5745034d5a95ef98106854aab875b47dc07abb141`.
+`8dc05e50b0594550808804748f5b1ad47c44f1ff354ff0c111e6a259d9a3fb69`.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
 `_CodeSignature`, and an embedded personal path.
+
+An audit self-test caught and corrected a `pipefail`/early-`grep` false
+negative in the first scanner revision. The old binary then failed on its
+absolute checkout strings. Global iOS `-ffile-prefix-map` options now rewrite
+source and build prefixes to stable `BattleShip/` and `BrawlerPadBuild/`
+labels; the corrected scanner passes the rebuilt binary without a waiver.
 
 This proves native device compilation and unsigned release packaging, not
 physical-device installation or runtime behavior. Re-sign/install/launch and

@@ -65,6 +65,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0005-ios-touch-layout-v2.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0006-ios-phone-touch-layout-v3.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0007-ios-release-path-redaction.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

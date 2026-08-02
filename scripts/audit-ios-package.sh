@@ -78,12 +78,14 @@ audit_app() {
     personal=""
     while IFS= read -r -d '' file; do
         if LC_ALL=C strings -a "$file" 2>/dev/null |
-            grep -Eq '/Users/[^/[:space:]]+|/Volumes/[^/[:space:]]+'; then
+            awk 'index($0, "/Users/") || index($0, "/Volumes/") { found=1 }
+                 END { exit found ? 0 : 1 }'; then
             personal="$file"
             break
         fi
         if LC_ALL=C strings -a "$file" 2>/dev/null |
-            grep -Eq -- '-----BEGIN [A-Z ]*PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}'; then
+            awk '/-----BEGIN [A-Z ]*PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}/ { found=1 }
+                 END { exit found ? 0 : 1 }'; then
             personal="$file"
             break
         fi

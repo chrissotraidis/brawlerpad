@@ -198,4 +198,8 @@
 - Packaged actual source and fetched-dependency notices (28 files), normalized
   timestamps and ordering, and proved two independently produced IPAs were
   byte-identical. The accepted unsigned proof IPA SHA-256 is
-  `4b6bf1daa3356930d136adecd683ae60d7a9914140a9009b78d72b2d14445466`.
+  `d7e4d1806b05b999ccb1d03344a3e1b89aefd014d00bf52a3088fd0d7dd5672b`.
+- An audit self-test exposed a false negative caused by an early-exiting grep
+  under `pipefail`. Replacing it with a full-stream scanner made the old binary
+  fail on absolute checkout paths. Added global iOS compiler prefix maps,
+  rebuilt, and verified the corrected audit sees only stable source labels.

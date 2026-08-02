@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -14,3 +14,11 @@ if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     set(DEPLOYMENT_TARGET "17.0" CACHE STRING
+         "Minimum supported iOS/iPadOS version" FORCE)
++
++    # Release binaries must not disclose a maintainer's checkout or build
++    # directory. Apply this at the directory level before any project or
++    # fetched-dependency targets are created so __FILE__ is stable too.
++    add_compile_options(
++        "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=BattleShip"
++        "-ffile-prefix-map=${CMAKE_BINARY_DIR}=BrawlerPadBuild"
++    )
+ endif()

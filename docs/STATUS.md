@@ -116,10 +116,14 @@ checkout, and BrawlerPad macOS package work stays explicitly open.
   and signing material. Its sole O2R is a bounded, entry-validated 21 KiB
   Fast3D shader archive.
 - Two packages from the same audited app produced identical bytes. The 3.4 MiB
-  unsigned IPA has SHA-256 `4b6bf1da...445466`, embeds 28 actual license/notice
+  unsigned IPA has SHA-256 `d7e4d180...d5672b`, embeds 28 actual license/notice
   files plus the rights/dependency manifests, and passed ZIP traversal,
   extraction, executable-identity, and recursive app audits. Injected ROM,
   signature, and personal-path fixtures were all rejected.
+- The path scanner's early-pipeline behavior was adversarially tested and
+  fixed. Its corrected form rejected the prior binary; iOS compiler prefix
+  maps now replace checkout/build roots with stable labels, and the rebuilt
+  app passes the corrected recursive scan without exceptions.
 
 ## In progress
 
