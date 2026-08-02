@@ -20,8 +20,9 @@ scripts/clone-sources.sh
 
 This clones BattleShip recursively and the HarkinianPad reference into ignored
 `ref/`, checks out exact commits, disables push URLs, and applies the ordered
-BrawlerPad patch series idempotently. The first patch is the PORT-only VS
-results transition-camera lifetime fix under `patches/decomp/`.
+BrawlerPad patch series idempotently. The series contains the PORT-only VS
+results transition-camera fix, the libultraship iOS runtime changes, and the
+BattleShip native Apple-mobile target and first-run flow.
 
 ## Build the untouched BattleShip macOS baseline
 
@@ -88,12 +89,40 @@ It creates a one-minute Dream Land time match (human Mario with neutral saved
 input versus level-9 CPU Fox). BattleShip's verifier must report 3,600 frames
 and checksum `0xC47FF9C5`.
 
-## Planned Apple builds
+## Build the iPhone/iPad simulator app
 
-The planned native targets will use CMake's Xcode generator. Exact commands
-will be added only after the maintained BattleShip patches exist and configure
-successfully. Device signing will always be optional; unsigned compilation and
-IPA packaging must not embed a maintainer certificate or provisioning profile.
+The same arm64 simulator app supports device families 1 (iPhone) and 2 (iPad):
+
+```sh
+scripts/build-ios-simulator.sh
+```
+
+The script configures CMake's Xcode generator with the pinned iOS toolchain,
+builds an unsigned Release app, verifies the Files/controller plist features,
+and rejects any bundled ROM or playable `BattleShip.o2r`. Its output is:
+
+```text
+ref/BattleShip/build-ios-sim/Release-iphonesimulator/BrawlerPad.app
+```
+
+Install and launch on a booted simulator without copying game data into the
+app bundle:
+
+```sh
+xcrun simctl install booted \
+  ref/BattleShip/build-ios-sim/Release-iphonesimulator/BrawlerPad.app
+xcrun simctl launch --console-pty booted com.brawlerpad.app
+```
+
+On first run, choose a supported ROM through Files. BrawlerPad validates an
+app-owned temporary copy, runs linked Torch in-process, installs the generated
+archive under Application Support, deletes the temporary copy, and launches
+the native game. A no-change Release rebuild takes approximately 13 seconds on
+the current proof machine and recompiles no source files.
+
+Device signing remains optional and is not part of this simulator command.
+Unsigned device compilation and IPA packaging must not embed a maintainer
+certificate or provisioning profile.
 
 Never place a ROM, `BattleShip.o2r`, save, certificate, or profile in an app
 source/resource group. Run `scripts/check-repo-safety.sh` before every commit or

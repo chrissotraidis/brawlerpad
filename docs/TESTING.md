@@ -56,15 +56,35 @@ and complete a match, background/foreground, terminate, and relaunch.
 
 | Area | iPhone simulator | iPad simulator | Physical device |
 |---|---|---|---|
-| Build/install/launch | Pending | Pending | Pending |
-| Metal/game render | Pending | Pending | Pending |
-| ROM import/extraction | Pending | Pending | Pending |
+| Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pending | Pending |
+| Metal/game render | Pass (visible native attract scene) | Pending | Pending |
+| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pending | Pending |
 | Touch menus and gameplay | Pending | Pending | Pending |
-| Controller connect/reconnect | Pending | Pending | Pending |
-| Audio/interruption/routes | Pending | Pending | Pending |
+| Controller connect/reconnect | SDL registration only | Pending | Pending |
+| Audio/interruption/routes | 32 kHz init only | Pending | Pending |
 | Background/foreground | Pending | Pending | Pending |
 | Save/update persistence | Pending | Pending | Pending |
 | Rotation/safe areas/aspect | Pending | Pending | Pending |
+
+### iPhone first-run proof
+
+The 2026-08-02 iPhone 17 Pro simulator run used a clean app data container.
+The bundled app was 9.7 MiB, arm64, and contained no ROM or generated playable
+archive. The native Files picker opened in BrawlerPad, selected the test ROM,
+and staged a temporary import. Torch logged the expected US SHA-1, processed
+the archive in-process in 66,731 ms, and produced a 12,114,884-byte
+`BattleShip.o2r` under `Library/Application Support/BattleShip` with SHA-1
+`b8b8bb9f17d142d4964ac8d34cb06588d93e48ba`.
+
+After completion, both the import copy and picker Inbox copy were absent while
+the original Documents ROM retained SHA-1
+`e2929e10fccc0aa84e5776227e798abc07cedabf`. Logs then proved archive mount,
+32 kHz SDL audio initialization, controller registration, and continuing game
+frames; the Simulator visibly rendered the game through Metal.
+
+The no-change Release build completed in 13.05 seconds and invoked no compiler
+or linker steps. This verifies that generated relocation, credits, and shader
+artifacts are dependency-driven instead of forcing a full rebuild.
 
 ## Touch coverage
 

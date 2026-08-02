@@ -1,0 +1,1113 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ab647e0..f3a4db7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2,10 +2,25 @@ cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
+ 
+ project(ssb64 LANGUAGES C CXX)
+ 
++set(SSB64_MOBILE OFF)
++if (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    set(SSB64_MOBILE ON)
++endif()
++
++if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    # Keep CMake's explicit clang target triple in sync with the Xcode target
++    # and Info.plist. The vendored toolchain defaults to iOS 13 otherwise,
++    # even when IPHONEOS_DEPLOYMENT_TARGET is set on the application target.
++    set(CMAKE_OSX_DEPLOYMENT_TARGET "17.0" CACHE STRING
++        "Minimum supported iOS/iPadOS version" FORCE)
++    set(DEPLOYMENT_TARGET "17.0" CACHE STRING
++        "Minimum supported iOS/iPadOS version" FORCE)
++endif()
++
+ # Android needs ASM for the aarch64 coroutine context-switch
+ # (port/coroutine_aarch64.S). Enable it before any add_library/add_executable
+ # call sees an .S source. ASM is preprocessed by clang on the way through.
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     enable_language(ASM)
+ endif()
+ 
+@@ -15,7 +30,7 @@ endif()
+ # and the in-engine call sites (#ifndef DISABLE_SCRIPTING). Forced ON for
+ # Android: funchook/TinyCC have no Android target and the loader is desktop-only.
+ # Set BEFORE add_subdirectory(libultraship) so the engine half sees it too.
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     set(DISABLE_SCRIPTING ON CACHE BOOL "Disable the mod system (scripting + hooks)" FORCE)
+ endif()
+ 
+@@ -134,7 +149,7 @@ endif()
+ # Android ships Torch as a SHARED library (libtorch_runner.so) inside the
+ # APK so the first-run UI can extract the user's ROM on-device via JNI —
+ # see the torch_runner target at the bottom of this file.
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     set(USE_STANDALONE OFF CACHE BOOL "" FORCE)
+ else()
+     set(USE_STANDALONE ON CACHE BOOL "" FORCE)
+@@ -214,11 +229,11 @@ if (NOT DISABLE_SCRIPTING)
+     endif()
+ endif()
+ 
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     # Android: build Torch in-tree as a STATIC lib (USE_STANDALONE=OFF
+     # was forced above). The libtorch_runner.so SHARED library at the
+     # bottom of this file wraps it for JNI.
+-    add_subdirectory(torch ${CMAKE_BINARY_DIR}/torch)
++    add_subdirectory(torch ${CMAKE_BINARY_DIR}/torch EXCLUDE_FROM_ALL)
+ else()
+     # Desktop: build Torch as a host executable via ExternalProject so it
+     # can run at our build time to extract ROM assets.
+@@ -288,25 +303,38 @@ add_custom_target(RegenerateRelocYamls
+     COMMENT "Regenerating reloc YAML configs (${SSB64_VERSION})"
+ )
+ 
+-add_custom_target(GenerateRelocArtifacts
+-    BYPRODUCTS
+-        ${CMAKE_CURRENT_SOURCE_DIR}/include/reloc_data.${SSB64_VERSION}.h
+-        ${CMAKE_CURRENT_SOURCE_DIR}/port/resource/RelocFileTable.${SSB64_VERSION}.cpp
++set(SSB64_RELOC_STAMP
++    ${CMAKE_CURRENT_BINARY_DIR}/generated/reloc_artifacts.${SSB64_VERSION}.stamp)
++add_custom_command(
++    OUTPUT ${SSB64_RELOC_STAMP}
++    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/generated
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_reloc_stubs.py --version ${SSB64_VERSION}
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_reloc_table.py --version ${SSB64_VERSION}
++    COMMAND ${CMAKE_COMMAND} -E touch ${SSB64_RELOC_STAMP}
++    DEPENDS
++        ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_reloc_stubs.py
++        ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_reloc_table.py
++        ${CMAKE_CURRENT_SOURCE_DIR}/tools/relocFileDescriptions.${SSB64_VERSION}.txt
+     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+     COMMENT "Generating reloc headers and RelocFileTable (${SSB64_VERSION})"
+ )
+-
+-add_custom_target(GenerateCreditsAssets
+-    BYPRODUCTS ${SSB64_CREDITS_GENERATED_FILES}
++add_custom_target(GenerateRelocArtifacts DEPENDS ${SSB64_RELOC_STAMP})
++add_custom_command(
++    OUTPUT ${SSB64_CREDITS_GENERATED_FILES}
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/creditsTextConverter.py staff.credits.${SSB64_VERSION}.txt
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/creditsTextConverter.py titles.credits.${SSB64_VERSION}.txt
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/creditsTextConverter.py -paragraphFont -multiline info.credits.${SSB64_VERSION}.txt
+     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/creditsTextConverter.py -paragraphFont companies.credits.${SSB64_VERSION}.txt
++    DEPENDS
++        ${CMAKE_CURRENT_SOURCE_DIR}/tools/creditsTextConverter.py
++        ${CMAKE_CURRENT_SOURCE_DIR}/decomp/src/credits/staff.credits.${SSB64_VERSION}.txt
++        ${CMAKE_CURRENT_SOURCE_DIR}/decomp/src/credits/titles.credits.${SSB64_VERSION}.txt
++        ${CMAKE_CURRENT_SOURCE_DIR}/decomp/src/credits/info.credits.${SSB64_VERSION}.txt
++        ${CMAKE_CURRENT_SOURCE_DIR}/decomp/src/credits/companies.credits.${SSB64_VERSION}.txt
+     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/decomp/src/credits
+     COMMENT "Encoding credits text assets (${SSB64_VERSION})"
+ )
++add_custom_target(GenerateCreditsAssets DEPENDS ${SSB64_CREDITS_GENERATED_FILES})
+ 
+ add_custom_target(PrepareBuildInputs
+     DEPENDS GenerateRelocArtifacts GenerateCreditsAssets
+@@ -451,6 +479,10 @@ file(GLOB_RECURSE SSB64_SRC_WP      "decomp/src/wp/*.c"      "decomp/src/wp/*.h"
+ 
+ # Port layer (C++ glue) — excludes port/stubs/ which is compiled as part of ssb64_game
+ file(GLOB_RECURSE SSB64_SRC_PORT "port/*.cpp" "port/*.c" "port/*.h")
++if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    list(APPEND SSB64_SRC_PORT
++        ${CMAKE_CURRENT_SOURCE_DIR}/port/ios/ios_rom_picker.mm)
++endif()
+ list(FILTER SSB64_SRC_PORT EXCLUDE REGEX "port/stubs/")
+ # RelocFileTable.{us,jp}.cpp both define gRelocFileTable — compile only the
+ # selected version's table (the rest are siblings for the other version).
+@@ -467,7 +499,7 @@ list(FILTER SSB64_SRC_PORT EXCLUDE REGEX "port/coroutine_test\\.cpp$")
+ if (DISABLE_SCRIPTING)
+     list(FILTER SSB64_SRC_PORT EXCLUDE REGEX "port/mods/")
+ endif()
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     # libtorch_runner.so wraps android_torch_bridge.cpp separately; keep
+     # it out of libmain.so so the static libtorch + its FetchContent'd
+     # deps don't bloat the SDL-bound game library.
+@@ -484,7 +516,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+ endif()
+ # Treat the generated icon header as a source so CMake schedules it ahead
+ # of any port TU compilation (port_window_icon.cpp #includes it).
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (NOT SSB64_MOBILE)
+     list(APPEND SSB64_SRC_PORT ${SSB64_ICON_GEN})
+ endif()
+ # Arrow baked headers — added as sources so CMake schedules their generation
+@@ -618,6 +650,10 @@ set(SSB64_COMPILE_DEFS
+     SSB64_ASSET_RECIPE_HASH=\"${SSB64_ASSET_RECIPE_HASH}\"
+ )
+ 
++if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    list(APPEND SSB64_COMPILE_DEFS __IOS__=1)
++endif()
++
+ if(SSB64_STAGE_CYCLE_DEMO)
+     list(APPEND SSB64_COMPILE_DEFS PORT_STAGE_CYCLE_DEMO=1)
+ endif()
+@@ -645,6 +681,7 @@ endif()
+ ################################################################################
+ 
+ add_library(ssb64_game OBJECT ${SSB64_DECOMP_SOURCES})
++add_dependencies(ssb64_game GenerateRelocArtifacts)
+ 
+ # Port stub definitions (C code that satisfies N64 linker symbols)
+ file(GLOB SSB64_STUBS "port/stubs/*.c")
+@@ -766,7 +803,7 @@ endif()
+ # Fetch Discord RPC (desktop only — Android drops Discord Rich Presence
+ # along with the rest of the network-dependent features).
+ ################################################################################
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (NOT SSB64_MOBILE)
+     # discord-rpc v3.4.0's CMakeLists declares cmake_minimum_required(VERSION 2.x),
+     # which CMake 3.30+ refuses to honor. Force a baseline policy version for the
+     # fetched subdir so the build still configures with current CMake.
+@@ -818,6 +855,27 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+         port/coroutine_armv7.S
+     )
+     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "main")
++elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
++        "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in")
++    add_executable(${PROJECT_NAME} MACOSX_BUNDLE
++        ${SSB64_SRC_PORT}
++        ${SSB64_DEBUG_TOOLS}
++        $<TARGET_OBJECTS:ssb64_game>
++        port/coroutine_aarch64.S
++    )
++    set_target_properties(${PROJECT_NAME} PROPERTIES
++        OUTPUT_NAME "BrawlerPad"
++        MACOSX_BUNDLE TRUE
++        MACOSX_BUNDLE_GUI_IDENTIFIER "com.brawlerpad.app"
++        MACOSX_BUNDLE_BUNDLE_NAME "BrawlerPad"
++        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
++        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.brawlerpad.app"
++        XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
++        XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "17.0"
++        XCODE_ATTRIBUTE_SUPPORTS_MACCATALYST NO
++        XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
++    )
+ else()
+     add_executable(${PROJECT_NAME} ${SSB64_SRC_PORT} ${SSB64_DEBUG_TOOLS} $<TARGET_OBJECTS:ssb64_game>)
+ 
+@@ -827,6 +885,7 @@ else()
+     # (US) or `BattleShip-JP` (JP), so the two are distinct applications.
+     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${SSB64_APP_NAME}")
+ endif()
++add_dependencies(${PROJECT_NAME} GenerateRelocArtifacts)
+ 
+ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+     set_target_properties(ssb64_game PROPERTIES
+@@ -856,7 +915,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
+     ${CMAKE_CURRENT_SOURCE_DIR}/debug_tools
+     ${SSB64_CSS_GEN_DIR}                         # CSS icon baked headers (arrow_data.h)
+ )
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (NOT SSB64_MOBILE)
+     target_include_directories(${PROJECT_NAME} PRIVATE
+         ${SSB64_ICON_GEN_DIR}                         # Generated icon header (port_icon_data.h)
+         ${discord_rpc_SOURCE_DIR}/include             # Discord Rich Presence
+@@ -873,9 +932,15 @@ endif()
+ # Link libultraship and Torch
+ ################################################################################
+ 
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (SSB64_MOBILE)
+     add_dependencies(${PROJECT_NAME} libultraship)
+     target_link_libraries(${PROJECT_NAME} PRIVATE libultraship)
++    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
++        add_dependencies(${PROJECT_NAME} torch)
++        target_link_libraries(${PROJECT_NAME} PRIVATE
++            torch SDL2::SDL2-static SDL2::SDL2main
++            "-framework UIKit" "-framework UniformTypeIdentifiers")
++    endif()
+ else()
+     add_dependencies(${PROJECT_NAME} libultraship TorchExternal discord-rpc)
+     target_link_libraries(${PROJECT_NAME} PRIVATE libultraship discord-rpc)
+@@ -884,7 +949,7 @@ endif()
+ # macOS: the port calls CFPreferences* directly (ApplePressAndHoldEnabled fix
+ # in main()), so link CoreFoundation explicitly rather than relying on it
+ # arriving transitively through libultraship's PRIVATE framework links.
+-if (APPLE)
++if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreFoundation")
+ endif()
+ add_dependencies(ssb64_game GenerateCreditsAssets)
+@@ -986,20 +1051,24 @@ endif()
+ # these into the APK assets/ at Gradle time via android/app/build.gradle.kts).
+ ################################################################################
+ 
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (NOT SSB64_MOBILE)
+     configure_file(
+         ${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt
+         ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt
+         COPYONLY
+     )
+ 
+-    add_custom_target(GenerateF3DO2R
+-        BYPRODUCTS ${CMAKE_SOURCE_DIR}/f3d.o2r
++    file(GLOB_RECURSE SSB64_F3D_SHADER_FILES CONFIGURE_DEPENDS
++        "${CMAKE_SOURCE_DIR}/libultraship/src/fast/shaders/*")
++    add_custom_command(
++        OUTPUT ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E tar cf ${CMAKE_SOURCE_DIR}/f3d.o2r --format=zip shaders
++        DEPENDS ${SSB64_F3D_SHADER_FILES}
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libultraship/src/fast
+         COMMENT "Packaging Fast3D shaders into f3d.o2r"
+     )
++    add_custom_target(GenerateF3DO2R DEPENDS ${CMAKE_SOURCE_DIR}/f3d.o2r)
+ 
+     add_dependencies(${PROJECT_NAME} GenerateF3DO2R)
+     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+@@ -1034,17 +1103,34 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+         # Arrow data is baked into the binary via arrow_data.h / arrow_left_data.h.
+     )
+ else()
+-    # Android: produce f3d.o2r in the source tree so Gradle's stageGameAssets
+-    # task can pick it up at APK build time. No POST_BUILD copies — the APK
+-    # asset pipeline handles staging into externalFilesDir on first launch.
+-    add_custom_target(GenerateF3DO2R
+-        BYPRODUCTS ${CMAKE_SOURCE_DIR}/f3d.o2r
++    # Mobile: produce the ROM-free Fast3D shader archive in the source tree.
++    # Android's Gradle pipeline stages it into the APK; iOS copies it and the
++    # non-playable import recipes into the application bundle below.
++    file(GLOB_RECURSE SSB64_F3D_SHADER_FILES CONFIGURE_DEPENDS
++        "${CMAKE_SOURCE_DIR}/libultraship/src/fast/shaders/*")
++    add_custom_command(
++        OUTPUT ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/f3d.o2r
+         COMMAND ${CMAKE_COMMAND} -E tar cf ${CMAKE_SOURCE_DIR}/f3d.o2r --format=zip shaders
++        DEPENDS ${SSB64_F3D_SHADER_FILES}
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libultraship/src/fast
+-        COMMENT "Packaging Fast3D shaders into f3d.o2r (Android)"
++        COMMENT "Packaging Fast3D shaders into f3d.o2r (mobile)"
+     )
++    add_custom_target(GenerateF3DO2R DEPENDS ${CMAKE_SOURCE_DIR}/f3d.o2r)
+     add_dependencies(${PROJECT_NAME} GenerateF3DO2R)
++
++    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
++        # CMake's Xcode generator can escape EFFECTIVE_PLATFORM_NAME in a
++        # TARGET_FILE_DIR post-build expression, leaving resources in a
++        # literal Release${EFFECTIVE_PLATFORM_NAME} directory. Let a small
++        # build-phase script use Xcode's resolved TARGET_BUILD_DIR and
++        # WRAPPER_NAME environment instead.
++        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
++            COMMAND /bin/sh "${CMAKE_SOURCE_DIR}/ios/stage_resources.sh"
++                "${CMAKE_SOURCE_DIR}" "${SSB64_VERSION}"
++            COMMENT "Staging ROM-free BrawlerPad resources into the iOS bundle"
++        )
++    endif()
+ endif()
+ 
+ ################################################################################
+@@ -1141,7 +1227,7 @@ endif()
+ # Intel macs too, but harmless; gated to APPLE.
+ ################################################################################
+ 
+-if(APPLE AND NOT DISABLE_SCRIPTING)
++if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT DISABLE_SCRIPTING)
+     find_package(Python3 QUIET COMPONENTS Interpreter)
+     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+         COMMENT "macOS: __TEXT->rwx maxprot + ad-hoc re-sign w/ JIT entitlements (mod hook backend)"
+@@ -1164,7 +1250,7 @@ endif()
+ # port/android_torch_bridge.cpp + RomImporter.java).
+ ################################################################################
+ 
+-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (NOT SSB64_MOBILE)
+ # Accept .z64 (big-endian), .n64 (little-endian), or .v64 (byteswapped).
+ # Torch's Cartridge::Normalize converts non-z64 byte orders in-memory.
+ set(SSB64_BASEROM "")
+diff --git a/port/bridge/lbreloc_byteswap.cpp b/port/bridge/lbreloc_byteswap.cpp
+index c9b1c34..2b2e604 100644
+--- a/port/bridge/lbreloc_byteswap.cpp
++++ b/port/bridge/lbreloc_byteswap.cpp
+@@ -29,6 +29,7 @@
+ #include <cstdlib>
+ #include <cstring>
+ #include <algorithm>
++#include <filesystem>
+ #include <unordered_map>
+ #include <unordered_set>
+ #include <vector>
+@@ -383,13 +384,10 @@ static void tex_dump_init_once()
+ 		sTexDumpState = -1;
+ 		return;
+ 	}
+-	// Best-effort directory create.  On Windows the binary's CWD is
+-	// build/Debug, so this lands at build/Debug/tex_dump/.
+-#if defined(_WIN32)
+-	std::system("if not exist tex_dump mkdir tex_dump");
+-#else
+-	std::system("mkdir -p tex_dump");
+-#endif
++	// Best-effort directory create. Avoid a shell subprocess: iOS marks
++	// system(3) unavailable, and std::filesystem is portable everywhere.
++	std::error_code ec;
++	std::filesystem::create_directories("tex_dump", ec);
+ 	sTexDumpState = 1;
+ }
+ 
+diff --git a/port/coroutine_aarch64.S b/port/coroutine_aarch64.S
+index 4dd548c..19c618e 100644
+--- a/port/coroutine_aarch64.S
++++ b/port/coroutine_aarch64.S
+@@ -29,6 +29,12 @@
+ 
+ #if defined(__aarch64__)
+ 
++#if defined(__APPLE__)
++#define PORT_C_SYMBOL(name) _##name
++#else
++#define PORT_C_SYMBOL(name) name
++#endif
++
+     .text
+     .balign 4
+ 
+@@ -40,11 +46,11 @@
+ // pauses at the instruction after its caller's bl to this function;
+ // when something later swaps back into "from", that instruction
+ // re-executes the ret below.
+-    .globl  port_coroutine_swap
++    .globl  PORT_C_SYMBOL(port_coroutine_swap)
+ #if defined(__ELF__)
+     .type   port_coroutine_swap, %function
+ #endif
+-port_coroutine_swap:
++PORT_C_SYMBOL(port_coroutine_swap):
+     // Save "from" (x0)
+     stp     x19, x20, [x0, #0]
+     stp     x21, x22, [x0, #16]
+@@ -87,17 +93,17 @@ port_coroutine_swap:
+ // argument to the C trampoline, which invokes the user entry function
+ // and performs a permanent yield. The brk traps if the C trampoline ever
+ // returns, which would indicate a bug in the swap logic.
+-    .globl  port_coroutine_trampoline_aarch64
++    .globl  PORT_C_SYMBOL(port_coroutine_trampoline_aarch64)
+ #if defined(__ELF__)
+     .type   port_coroutine_trampoline_aarch64, %function
+ #endif
+-port_coroutine_trampoline_aarch64:
++PORT_C_SYMBOL(port_coroutine_trampoline_aarch64):
+     // Establish a clean frame so any debugger walking via x29 stops cleanly
+     // at the trampoline rather than walking into uninitialized stack.
+     mov     x29, #0
+     mov     x30, #0
+     mov     x0, x19
+-    bl      port_coroutine_trampoline_c
++    bl      PORT_C_SYMBOL(port_coroutine_trampoline_c)
+     brk     #0
+ #if defined(__ELF__)
+     .size   port_coroutine_trampoline_aarch64, .-port_coroutine_trampoline_aarch64
+diff --git a/port/coroutine_android.cpp b/port/coroutine_android.cpp
+index 88dfaef..4715eb8 100644
+--- a/port/coroutine_android.cpp
++++ b/port/coroutine_android.cpp
+@@ -1,5 +1,5 @@
+ /**
+- * coroutine_android.cpp — ARM coroutine impl for Android (bionic).
++ * coroutine_android.cpp — ARM coroutine impl for Android and iOS.
+  *
+  * Bionic libc dropped getcontext/makecontext/swapcontext (they were
+  * never supported on ARM), so the POSIX ucontext path in
+@@ -14,11 +14,11 @@
+  * time.
+  */
+ 
+-#if defined(__ANDROID__)
++#if defined(__ANDROID__) || defined(__IOS__)
+ 
+ #if !defined(__aarch64__) && !defined(__arm__)
+-#  error "Android coroutine backend supports arm64-v8a (coroutine_aarch64.S) "  \
+-         "and armeabi-v7a (coroutine_armv7.S) only. Add an x86/x86_64 swap "    \
++#  error "Mobile coroutine backend supports arm64 (coroutine_aarch64.S) "       \
++         "and Android armv7 (coroutine_armv7.S) only. Add an x86/x86_64 swap "  \
+          "if you need those ABIs."
+ #endif
+ 
+@@ -220,4 +220,4 @@ int port_coroutine_in_coroutine(void) {
+ 
+ } /* extern "C" */
+ 
+-#endif /* __ANDROID__ */
++#endif /* __ANDROID__ || __IOS__ */
+diff --git a/port/coroutine_posix.cpp b/port/coroutine_posix.cpp
+index 121995c..fe530ca 100644
+--- a/port/coroutine_posix.cpp
++++ b/port/coroutine_posix.cpp
+@@ -5,7 +5,7 @@
+  * swapcontext() provides the resume/yield mechanism.
+  */
+ 
+-#if !defined(_WIN32) && !defined(__ANDROID__)
++#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(__IOS__)
+ 
+ /*
+  * macOS marks the ucontext / swapcontext routines as deprecated and hides
+@@ -221,4 +221,4 @@ int port_coroutine_in_coroutine(void)
+ 	return sCurrentCoroutine != NULL;
+ }
+ 
+-#endif /* !_WIN32 && !__ANDROID__ */
++#endif /* !_WIN32 && !__ANDROID__ && !__IOS__ */
+diff --git a/port/first_run.cpp b/port/first_run.cpp
+index 2e8d778..9ba3c5b 100644
+--- a/port/first_run.cpp
++++ b/port/first_run.cpp
+@@ -18,9 +18,16 @@
+ #include <fstream>
+ #include <functional>
+ #include <future>
++#include <memory>
+ #include <string>
+ #include <vector>
+ 
++#ifdef __IOS__
++#include "Companion.h"
++#include "n64/Cartridge.h"
++#include "ios/ios_rom_picker.h"
++#endif
++
+ #ifdef _WIN32
+ #include <windows.h>
+ #endif
+@@ -282,6 +289,12 @@ bool RunTorchCommand(const std::string& commandLine, const std::string& workingD
+         return false;
+     }
+     return true;
++#elif defined(__IOS__)
++    (void)commandLine;
++    (void)workingDir;
++    (void)logPath;
++    error = "Native iOS ROM import is not initialized";
++    return false;
+ #else
+     const std::string shellCommand =
+         "cd " + QuoteCommandArg(workingDir) + " && " + commandLine + " > " + QuoteCommandArg(logPath) + " 2>&1";
+@@ -294,6 +307,71 @@ bool RunTorchCommand(const std::string& commandLine, const std::string& workingD
+ #endif
+ }
+ 
++#ifdef __IOS__
++bool RunInProcessTorch(const std::string& romPath, const std::string& sourceDir,
++                       const std::string& destinationDir, const std::string& logPath,
++                       std::string& error) {
++    constexpr size_t kSupportedRomSize = 16 * 1024 * 1024;
++#if defined(REGION_JP)
++    constexpr const char* kSupportedSha1 = "4b71f0e01878696733eefa9c80d11c147ecb4984";
++#else
++    constexpr const char* kSupportedSha1 = "e2929e10fccc0aa84e5776227e798abc07cedabf";
++#endif
++
++    try {
++        std::ifstream input(romPath, std::ios::binary);
++        if (!input) {
++            error = "The selected ROM could not be opened";
++            return false;
++        }
++        std::vector<uint8_t> romBytes(std::istreambuf_iterator<char>(input), {});
++        if (romBytes.size() != kSupportedRomSize) {
++            error = "Unsupported ROM size: expected 16 MiB, got " +
++                    std::to_string(romBytes.size()) + " bytes";
++            AppendLogLine(logPath, "ERROR: " + error);
++            return false;
++        }
++        if (!N64::Cartridge::Normalize(romBytes)) {
++            error = "Unsupported ROM byte order (expected .z64, .n64, or .v64)";
++            AppendLogLine(logPath, "ERROR: " + error);
++            return false;
++        }
++
++        const std::string sha1 = Companion::CalculateHash(romBytes);
++        AppendLogLine(logPath, "Normalized ROM SHA-1: " + sha1);
++        if (sha1 != kSupportedSha1) {
++            error = "Unsupported ROM revision (SHA-1 " + sha1 +
++                    "; expected " + kSupportedSha1 + ")";
++            AppendLogLine(logPath, "ERROR: " + error);
++            return false;
++        }
++
++        auto instance = std::make_unique<Companion>(
++            fs::path(romPath), ArchiveType::O2R, false, sourceDir, destinationDir);
++        Companion::Instance = instance.get();
++        try {
++            instance->Init(ExportType::Binary);
++        } catch (...) {
++            Companion::Instance = nullptr;
++            throw;
++        }
++        Companion::Instance = nullptr;
++        AppendLogLine(logPath, "In-process Torch extraction completed");
++        return true;
++    } catch (const std::exception& exception) {
++        Companion::Instance = nullptr;
++        error = std::string("In-process Torch failed: ") + exception.what();
++        AppendLogLine(logPath, "ERROR: " + error);
++        return false;
++    } catch (...) {
++        Companion::Instance = nullptr;
++        error = "In-process Torch failed with an unknown error";
++        AppendLogLine(logPath, "ERROR: " + error);
++        return false;
++    }
++}
++#endif
++
+ // Locate the directory that contains config.yml (the integrated extraction
+ // config plus yamls/us/*.yml recipes used by standalone Torch.
+ std::string FindAssetConfigDir() {
+@@ -430,12 +508,16 @@ ExtractionResult ExtractAssetsIfNeeded(const std::string& target_o2r_path, bool
+     }
+     port_log("first_run: asset config dir -> %s\n", cfgDir.c_str());
+ 
++#ifndef __IOS__
+     const std::string torchExe = FindTorchExecutable();
+     if (torchExe.empty()) {
+         port_log("first_run: ERROR could not locate torch executable\n");
+         return { false, {}, "Could not locate torch executable", {} };
+     }
+     port_log("first_run: torch executable -> %s\n", torchExe.c_str());
++#else
++    port_log("first_run: using linked in-process Torch extractor\n");
++#endif
+ 
+     fs::create_directories(targetPath.parent_path());
+     const fs::path workDir = fs::absolute(targetPath.parent_path() / "torch-work");
+@@ -471,13 +553,19 @@ ExtractionResult ExtractAssetsIfNeeded(const std::string& target_o2r_path, bool
+         std::ofstream truncate(logPath, std::ios::trunc);
+     }
+ 
++    std::string commandError;
++#ifdef __IOS__
++    const bool extractionSucceeded =
++        RunInProcessTorch(rom, runDir, runDir, logPath, commandError);
++#else
+     const std::string commandLine = QuoteCommandArg(torchExe) + " o2r " + QuoteCommandArg(rom) +
+                                     " -s " + QuoteCommandArg(runDir) + " -d " + QuoteCommandArg(runDir);
+     port_log("first_run: > %s\n", commandLine.c_str());
+     AppendLogLine(logPath, "Command: " + commandLine);
+-
+-    std::string commandError;
+-    if (!RunTorchCommand(commandLine, runDir, logPath, commandError)) {
++    const bool extractionSucceeded =
++        RunTorchCommand(commandLine, runDir, logPath, commandError);
++#endif
++    if (!extractionSucceeded) {
+         port_log("first_run: ERROR extractor failed: %s\n", commandError.c_str());
+         if (staleRecipe) {
+             /* Re-extraction failed but the previous archive is untouched —
+@@ -548,8 +636,14 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+     // 256 char ImGui input buffer. Pre-fill with the conventional path the
+     // user is most likely to try first; they can edit/replace freely.
+     char romPath[1024] = {0};
++#ifndef __IOS__
+     std::snprintf(romPath, sizeof(romPath), "%s/%s.z64",
+                   appData.c_str(), kRomBase);
++#endif
++    bool romIsTemporary = false;
++#ifdef __IOS__
++    bool pickerWaiting = false;
++#endif
+ 
+     enum class State { WaitingForRom, Extracting, Done, Cancelled };
+     State state = State::WaitingForRom;
+@@ -607,6 +701,29 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+             break;
+         }
+ 
++#ifdef __IOS__
++        {
++            char pickedPath[1024] = {0};
++            char pickerError[512] = {0};
++            const int pickerResult = BrawlerPadIOSPollRomPicker(
++                pickedPath, sizeof(pickedPath), pickerError, sizeof(pickerError));
++            if (pickerResult == 1) {
++                std::snprintf(romPath, sizeof(romPath), "%s", pickedPath);
++                romIsTemporary = true;
++                pickerWaiting = false;
++                statusMsg = "ROM copied into BrawlerPad's temporary storage.";
++                port_log("first_run: iOS picker staged ROM -> %s\n", pickedPath);
++            } else if (pickerResult == 2) {
++                pickerWaiting = false;
++                statusMsg = "ROM selection cancelled.";
++            } else if (pickerResult < 0) {
++                pickerWaiting = false;
++                statusMsg = pickerError[0] ? pickerError : "The Files picker failed.";
++                port_log("first_run: iOS picker error -> %s\n", statusMsg.c_str());
++            }
++        }
++#endif
++
+         // Drag-drop integration: if the user dropped a file on the window
+         // since last frame, paste its path into the input. SDL already
+         // routes SDL_DROPFILE events to FileDropMgr via Fast3dWindow's
+@@ -614,6 +731,7 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+         if (fdm && fdm->FileDropped()) {
+             if (const char* p = fdm->GetDroppedFile()) {
+                 std::snprintf(romPath, sizeof(romPath), "%s", p);
++                romIsTemporary = false;
+                 statusMsg.clear();
+                 port_log("first_run: drag-drop -> %s\n", p);
+             }
+@@ -646,8 +764,21 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+                 // InputText takes most of the row, Browse takes the right
+                 // edge. -100 reserves room for a 90 px button + padding.
+                 ImGui::SetNextItemWidth(-100);
++#ifdef __IOS__
++                ImGui::BeginDisabled();
++#endif
+                 ImGui::InputText("##rompath", romPath, sizeof(romPath));
++#ifdef __IOS__
++                ImGui::EndDisabled();
++#endif
+                 ImGui::SameLine();
++#ifdef __IOS__
++                if (ImGui::Button(pickerWaiting ? "Opening..." : "Choose ROM", ImVec2(90, 0)) &&
++                    !pickerWaiting) {
++                    pickerWaiting = (BrawlerPadIOSPresentRomPicker() == 0);
++                    statusMsg.clear();
++                }
++#else
+                 if (ImGui::Button("Browse...", ImVec2(90, 0))) {
+                     std::string picked = ssb64::OpenFileDialog(
+                         "Select your Super Smash Bros. ROM",
+@@ -660,11 +791,17 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+                                  picked.c_str());
+                     }
+                 }
++#endif
+ 
++#ifdef __IOS__
++                ImGui::TextDisabled("Choose your legally obtained ROM in Files.");
++                ImGui::TextDisabled("BrawlerPad copies it temporarily, validates it, then deletes the copy.");
++#else
+                 ImGui::TextDisabled(
+                     "Tip: drag a .z64/.n64/.v64 onto the window, or click");
+                 ImGui::TextDisabled(
+                     "     Browse... and pick your ROM dump.");
++#endif
+                 ImGui::Spacing();
+ 
+                 if (state == State::Extracting) {
+@@ -696,10 +833,23 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+                         statusMsg.clear();
+                         std::string target = target_o2r_path;
+                         std::string selectedRom = romPath;
+-                        extractFuture = std::async(std::launch::async, [target, selectedRom]() {
+-                            return ExtractAssetsIfNeeded(target, true, selectedRom);
++                        const bool removeSelectedRom = romIsTemporary;
++                        extractFuture = std::async(std::launch::async, [target, selectedRom, removeSelectedRom]() {
++                            ExtractionResult result = ExtractAssetsIfNeeded(target, true, selectedRom);
++                            if (removeSelectedRom) {
++                                std::error_code removeError;
++                                fs::remove(selectedRom, removeError);
++                                if (removeError) {
++                                    port_log("first_run: WARNING could not remove temporary ROM: %s\n",
++                                             removeError.message().c_str());
++                                } else {
++                                    port_log("first_run: removed temporary ROM import copy\n");
++                                }
++                            }
++                            return result;
+                         });
+                         extractRunning = true;
++                        romIsTemporary = false;
+                     }
+                 }
+ 
+diff --git a/port/gameloop.cpp b/port/gameloop.cpp
+index 7b85afd..034fc8b 100644
+--- a/port/gameloop.cpp
++++ b/port/gameloop.cpp
+@@ -732,7 +732,7 @@ void PortPushFrame(void)
+ 	port_enhancement_stage_hazards_tick();
+ 	port_widescreen_tick();
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+ 	ssb64::enhancements::TickDiscordPresence(); // DRP
+ #endif
+ 
+diff --git a/port/gui/PortMenu.cpp b/port/gui/PortMenu.cpp
+index 49925c9..c13f840 100644
+--- a/port/gui/PortMenu.cpp
++++ b/port/gui/PortMenu.cpp
+@@ -357,7 +357,7 @@ void RenderPostProcessDiagnostics(WidgetInfo& /*widget*/) {
+     }
+ }
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+ // Shader-pack downloader UI is gated off on Android (the libretro
+ // catalog fetch + ZIP-extract pipeline doesn't fit Play Store distro;
+ // port/enhancements/ShaderDownloader.cpp is not compiled into libmain.so).
+@@ -858,7 +858,7 @@ void PortMenu::AddMenuSettings() {
+         .RaceDisable(false)
+         .Options(CheckboxOptions().Tooltip("Gives the search input focus when it becomes visible."));
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     // DRP — Android drops discord-rpc entirely (no curl + Play Store
+     // distribution friction; the Discord SDK isn't built for mobile).
+     AddWidget(path, "Enable Discord Rich Presence", WIDGET_CVAR_CHECKBOX)
+@@ -937,7 +937,7 @@ void PortMenu::AddMenuSettings() {
+                      .DefaultValue(1));
+ #endif
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     // Post-process / CRT shader stack — hidden on Android. The libretro
+     // slang→SPIR-V→backend transpile path hasn't been validated against
+     // GLES on mobile, and the libretro shader catalog download (curl +
+@@ -977,7 +977,7 @@ void PortMenu::AddMenuSettings() {
+                      .ComboMap(kEnhancedFpsMap)
+                      .DefaultIndex(0));
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     AddWidget(path, "Windowed Fullscreen", WIDGET_CVAR_CHECKBOX)
+         .CVar(CVAR_SDL_WINDOWED_FULLSCREEN)
+         .RaceDisable(false)
+@@ -1402,7 +1402,7 @@ void PortMenu::AddMenuAssets() {
+     // Pack-authoring dump tooling is desktop-only — it writes hundreds of
+     // files into <app>/ and is driven from a separate offline conversion
+     // pipeline, neither of which makes sense on a touch device.
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     AddWidget(path, "Pack Authoring", WIDGET_SEPARATOR_TEXT);
+     AddWidget(path,
+               "Dump Source Textures writes one .bin per unique texture into "
+@@ -1667,7 +1667,7 @@ void PortMenu::AddMenuAbout() {
+     AddWidget(path, "Zorkats: C Modding Documentation", WIDGET_TEXT);
+ 
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     // BUILT-IN UPDATER — hidden on Android. App updates come through the
+     // Play Store on mobile; a curl-driven GitHub-releases updater can't
+     // replace a system-managed installation, and the curl shell-out
+@@ -1850,7 +1850,7 @@ void PortMenu::DrawElement() {
+     }
+ 
+     RenderPostProcessLowResWarnModal();
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+     RenderShaderPackModal();
+ #endif
+ }
+diff --git a/port/port.cpp b/port/port.cpp
+index 62c17c9..5b9e85e 100644
+--- a/port/port.cpp
++++ b/port/port.cpp
+@@ -2,7 +2,7 @@
+ // the .so via dlsym("SDL_main"), so we let SDL_main.h's `#define main SDL_main`
+ // rename the entry point during preprocessing — which is exactly what
+ // SDL_MAIN_HANDLED would suppress.
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+ #define SDL_MAIN_HANDLED
+ #endif
+ #include "port.h"
+@@ -38,7 +38,7 @@
+ #include "hires/HiResHook.h"
+ #include "hires/HiResPack.h"
+ #endif
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+ #include "port_window_icon.h"
+ #endif
+ #if defined(__ANDROID__)
+@@ -900,7 +900,7 @@ static int PortInitImpl(int argc, char* argv[]) {
+ 			port_log("SSB64: Port menu attached\n");
+ 		}
+ 
+-#if !defined(__ANDROID__)
++#if !defined(__ANDROID__) && !defined(__IOS__)
+ 		// Linux: WMs only show the app icon if SDL_SetWindowIcon is called
+ 		// on the live window. .ico/.icns paths are baked into the .exe /
+ 		// .app on Windows / macOS so this is a no-op there. Android pulls
+@@ -1231,7 +1231,7 @@ int main(int argc, char* argv[]) {
+ 		port_log_init(logPath.c_str());
+ 	}
+ 
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+ 	/* Disable the macOS press-and-hold accent/diacritic popup for this app.
+ 	 * SDL keeps a Cocoa text-input context alive for the game window, so
+ 	 * holding a movement key (e.g. WASD) makes AppKit pop the accent picker
+diff --git a/ios/Info.plist.in b/ios/Info.plist.in
+new file mode 100644
+index 0000000..e671b69
+--- /dev/null
++++ b/ios/Info.plist.in
+@@ -0,0 +1,46 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
++<plist version="1.0">
++<dict>
++    <key>CFBundleDevelopmentRegion</key>
++    <string>en</string>
++    <key>CFBundleDisplayName</key>
++    <string>BrawlerPad</string>
++    <key>CFBundleExecutable</key>
++    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
++    <key>CFBundleIdentifier</key>
++    <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
++    <key>CFBundleInfoDictionaryVersion</key>
++    <string>6.0</string>
++    <key>CFBundleName</key>
++    <string>BrawlerPad</string>
++    <key>CFBundlePackageType</key>
++    <string>APPL</string>
++    <key>CFBundleShortVersionString</key>
++    <string>0.1.0</string>
++    <key>CFBundleVersion</key>
++    <string>1</string>
++    <key>LSRequiresIPhoneOS</key>
++    <true/>
++    <key>LSSupportsOpeningDocumentsInPlace</key>
++    <true/>
++    <key>UIFileSharingEnabled</key>
++    <true/>
++    <key>UIApplicationSupportsIndirectInputEvents</key>
++    <true/>
++    <key>UILaunchScreen</key>
++    <dict/>
++    <key>UIRequiresFullScreen</key>
++    <true/>
++    <key>UISupportedInterfaceOrientations</key>
++    <array>
++        <string>UIInterfaceOrientationLandscapeLeft</string>
++        <string>UIInterfaceOrientationLandscapeRight</string>
++    </array>
++    <key>UISupportedInterfaceOrientations~ipad</key>
++    <array>
++        <string>UIInterfaceOrientationLandscapeLeft</string>
++        <string>UIInterfaceOrientationLandscapeRight</string>
++    </array>
++</dict>
++</plist>
+diff --git a/ios/stage_resources.sh b/ios/stage_resources.sh
+new file mode 100644
+index 0000000..77a4ea2
+--- /dev/null
++++ b/ios/stage_resources.sh
+@@ -0,0 +1,15 @@
++#!/bin/sh
++set -eu
++
++source_root=$1
++region=$2
++bundle_dir=${TARGET_BUILD_DIR:?Xcode did not provide TARGET_BUILD_DIR}/${WRAPPER_NAME:?Xcode did not provide WRAPPER_NAME}
++
++mkdir -p "$bundle_dir/assets/custom/fonts" "$bundle_dir/yamls/$region"
++
++cp -f "$source_root/f3d.o2r" "$bundle_dir/f3d.o2r"
++cp -f "$source_root/gamecontrollerdb.txt" "$bundle_dir/gamecontrollerdb.txt"
++cp -f "$source_root/config.yml" "$bundle_dir/config.yml"
++cp -f "$source_root/assets/custom/fonts/Montserrat-Regular.ttf" "$bundle_dir/assets/custom/fonts/Montserrat-Regular.ttf"
++cp -f "$source_root/assets/custom/fonts/Inconsolata-Regular.ttf" "$bundle_dir/assets/custom/fonts/Inconsolata-Regular.ttf"
++cp -f "$source_root/yamls/$region/"*.yml "$bundle_dir/yamls/$region/"
+diff --git a/port/ios/ios_rom_picker.h b/port/ios/ios_rom_picker.h
+new file mode 100644
+index 0000000..15434c5
+--- /dev/null
++++ b/port/ios/ios_rom_picker.h
+@@ -0,0 +1,22 @@
++#pragma once
++
++#include <stddef.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++// Present the Files picker from BrawlerPad's SDL/UIKit view controller.
++// Returns 0 when presentation was scheduled, or -1 with a message retrievable
++// from BrawlerPadIOSPollRomPicker when no presenter is available.
++int BrawlerPadIOSPresentRomPicker(void);
++
++// Poll the asynchronous picker result.
++//   0 = waiting/idle, 1 = selected (path populated), 2 = cancelled,
++//  -1 = error (error populated). A terminal result is consumed by this call.
++int BrawlerPadIOSPollRomPicker(char* path, size_t pathCapacity,
++                               char* error, size_t errorCapacity);
++
++#ifdef __cplusplus
++}
++#endif
+diff --git a/port/ios/ios_rom_picker.mm b/port/ios/ios_rom_picker.mm
+new file mode 100644
+index 0000000..1cd3660
+--- /dev/null
++++ b/port/ios/ios_rom_picker.mm
+@@ -0,0 +1,163 @@
++#if defined(__IOS__)
++
++#import <UIKit/UIKit.h>
++#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
++
++#include "ios_rom_picker.h"
++
++#include <algorithm>
++#include <cstring>
++#include <string>
++
++namespace {
++
++enum class PickerState { Idle, Waiting, Selected, Cancelled, Error };
++
++PickerState gState = PickerState::Idle;
++std::string gSelectedPath;
++std::string gError;
++id gDelegate = nil;
++
++void CopyCString(const std::string& source, char* destination, size_t capacity) {
++    if (destination == nullptr || capacity == 0) {
++        return;
++    }
++    const size_t count = std::min(source.size(), capacity - 1);
++    std::memcpy(destination, source.data(), count);
++    destination[count] = '\0';
++}
++
++UIViewController* ActiveViewController() {
++    UIWindow* keyWindow = nil;
++    for (UIScene* scene in UIApplication.sharedApplication.connectedScenes) {
++        if (![scene isKindOfClass:UIWindowScene.class]) {
++            continue;
++        }
++        UIWindowScene* windowScene = (UIWindowScene*)scene;
++        for (UIWindow* window in windowScene.windows) {
++            if (window.isKeyWindow) {
++                keyWindow = window;
++                break;
++            }
++        }
++        if (keyWindow != nil) {
++            break;
++        }
++    }
++
++    UIViewController* controller = keyWindow.rootViewController;
++    while (controller.presentedViewController != nil) {
++        controller = controller.presentedViewController;
++    }
++    return controller;
++}
++
++} // namespace
++
++@interface BrawlerPadRomPickerDelegate : NSObject <UIDocumentPickerDelegate>
++@end
++
++@implementation BrawlerPadRomPickerDelegate
++
++- (void)documentPicker:(UIDocumentPickerViewController*)controller
++    didPickDocumentsAtURLs:(NSArray<NSURL*>*)urls {
++    NSURL* sourceURL = urls.firstObject;
++    if (sourceURL == nil) {
++        gError = "The Files picker returned no document";
++        gState = PickerState::Error;
++        gDelegate = nil;
++        return;
++    }
++
++    NSString* extension = sourceURL.pathExtension.lowercaseString;
++    NSSet<NSString*>* allowed = [NSSet setWithObjects:@"z64", @"n64", @"v64", nil];
++    if (![allowed containsObject:extension]) {
++        gError = "Select a .z64, .n64, or .v64 ROM file";
++        gState = PickerState::Error;
++        gDelegate = nil;
++        return;
++    }
++
++    NSString* temporaryName = [@"BrawlerPad-ROM-Import" stringByAppendingPathExtension:extension];
++    NSURL* destinationURL = [NSURL fileURLWithPath:
++        [NSTemporaryDirectory() stringByAppendingPathComponent:temporaryName]];
++
++    const BOOL securityScoped = [sourceURL startAccessingSecurityScopedResource];
++    NSFileManager* files = NSFileManager.defaultManager;
++    [files removeItemAtURL:destinationURL error:nil];
++    NSError* copyError = nil;
++    const BOOL copied = [files copyItemAtURL:sourceURL toURL:destinationURL error:&copyError];
++    if (securityScoped) {
++        [sourceURL stopAccessingSecurityScopedResource];
++    }
++
++    if (!copied) {
++        gError = copyError.localizedDescription.UTF8String ?: "Could not copy the selected ROM";
++        gState = PickerState::Error;
++    } else {
++        gSelectedPath = destinationURL.path.fileSystemRepresentation;
++        gState = PickerState::Selected;
++    }
++    gDelegate = nil;
++}
++
++- (void)documentPickerWasCancelled:(UIDocumentPickerViewController*)controller {
++    gState = PickerState::Cancelled;
++    gDelegate = nil;
++}
++
++@end
++
++extern "C" int BrawlerPadIOSPresentRomPicker(void) {
++    if (![NSThread isMainThread]) {
++        gError = "The ROM picker must be presented on the main thread";
++        gState = PickerState::Error;
++        return -1;
++    }
++    if (gState == PickerState::Waiting) {
++        return 0;
++    }
++
++    UIViewController* presenter = ActiveViewController();
++    if (presenter == nil) {
++        gError = "BrawlerPad could not find its active iOS window";
++        gState = PickerState::Error;
++        return -1;
++    }
++
++    gSelectedPath.clear();
++    gError.clear();
++    gState = PickerState::Waiting;
++    gDelegate = [BrawlerPadRomPickerDelegate new];
++
++    UIDocumentPickerViewController* picker =
++        [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeData]
++                                                                   asCopy:YES];
++    picker.delegate = gDelegate;
++    picker.allowsMultipleSelection = NO;
++    picker.modalPresentationStyle = UIModalPresentationFormSheet;
++    [presenter presentViewController:picker animated:YES completion:nil];
++    return 0;
++}
++
++extern "C" int BrawlerPadIOSPollRomPicker(char* path, size_t pathCapacity,
++                                            char* error, size_t errorCapacity) {
++    switch (gState) {
++        case PickerState::Selected:
++            CopyCString(gSelectedPath, path, pathCapacity);
++            gState = PickerState::Idle;
++            return 1;
++        case PickerState::Cancelled:
++            gState = PickerState::Idle;
++            return 2;
++        case PickerState::Error:
++            CopyCString(gError, error, errorCapacity);
++            gState = PickerState::Idle;
++            return -1;
++        case PickerState::Idle:
++        case PickerState::Waiting:
++            return 0;
++    }
++}
++
++#endif // __IOS__
+

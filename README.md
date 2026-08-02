@@ -14,14 +14,16 @@ now compiles and runs natively on Apple Silicon through Metal, validates and
 extracts the local reference ROM, completes a deterministic one-minute match,
 persists a save, relaunches, and packages as a ROM-free `.app` and DMG.
 
-The initial upstream Metal results-screen regression is now fixed by a small,
-reproducible BrawlerPad patch: the native port retires the photo-transition
-camera when its wipe mesh finishes. The complete match and populated results
-screen now render correctly. Physical-controller/audible-output confirmation
-and the mobile-safe BrawlerPad core are the current work.
+The initial upstream Metal results-screen regression is fixed by a small,
+reproducible BrawlerPad patch. A native arm64 iOS simulator app also now builds,
+installs, opens a ROM through Files, validates it, runs Torch extraction
+in-process, and launches the Metal-rendered game on an iPhone simulator. The
+app bundle contains no ROM or generated playable archive.
 
-No iOS/iPadOS build or release is claimed yet. See [current status](docs/STATUS.md)
-and the [implementation plan](docs/PLAN.md) for evidence and remaining work.
+iPad runtime coverage, customizable touch controls, lifecycle recovery,
+physical-device testing, and release packaging remain in progress. See
+[current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
+for exact evidence and remaining work.
 
 ## Repository boundary
 
@@ -54,6 +56,20 @@ scripts/build-macos-baseline.sh /absolute/path/to/your/rom.n64
 The ROM is hash-checked and linked only into the ignored BattleShip research
 checkout. It is never copied into this repository's tracked project or an app
 package. Full details are in [docs/BUILDING.md](docs/BUILDING.md).
+
+## iPhone and iPad simulator build
+
+After fetching the pinned sources and patches, build the unsigned arm64 app:
+
+```sh
+scripts/build-ios-simulator.sh
+```
+
+The resulting `BrawlerPad.app` supports both iPhone and iPad simulator device
+families. On first launch, choose your legally obtained supported ROM through
+Files; BrawlerPad uses only a temporary validated copy to generate resources
+under Application Support, then deletes that copy. See
+[docs/BUILDING.md](docs/BUILDING.md) for install and launch commands.
 
 ## Project documentation
 

@@ -1,0 +1,171 @@
+diff --git a/cmake/dependencies/common.cmake b/cmake/dependencies/common.cmake
+index a64f1899..b2c883a0 100644
+--- a/cmake/dependencies/common.cmake
++++ b/cmake/dependencies/common.cmake
+@@ -197,7 +197,7 @@ FetchContent_MakeAvailable(prism)
+ # success but hid_enumerate() returns nullptr, so RaphnetPhysicalDeviceManager
+ # decides "no adapter found" and the SDL2 / Java HIDDeviceManager handles
+ # everything that's actually present.
+-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
++if (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     set(_LUS_HIDAPI_STUB_DIR ${CMAKE_CURRENT_BINARY_DIR}/hidapi_stub)
+     file(MAKE_DIRECTORY ${_LUS_HIDAPI_STUB_DIR})
+     file(WRITE ${_LUS_HIDAPI_STUB_DIR}/hidapi.h [=[
+@@ -240,7 +240,7 @@ static inline int                       hid_read(hid_device *dev, unsigned char
+ static inline int                       hid_send_feature_report(hid_device *dev, const unsigned char *data, size_t length) { (void)dev; (void)data; (void)length; return -1; }
+ static inline int                       hid_get_feature_report(hid_device *dev, unsigned char *data, size_t length) { (void)dev; (void)data; (void)length; return -1; }
+ static inline int                       hid_set_nonblocking(hid_device *dev, int nonblock) { (void)dev; (void)nonblock; return 0; }
+-static inline const wchar_t            *hid_error(hid_device *dev) { (void)dev; return L"hidapi-stub: Android build has no native HID backend"; }
++static inline const wchar_t            *hid_error(hid_device *dev) { (void)dev; return L"hidapi-stub: mobile build has no native HID backend"; }
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/cmake/ios-toolchain-populate.cmake b/cmake/ios-toolchain-populate.cmake
+index eb93fea4..c62a5bf2 100644
+--- a/cmake/ios-toolchain-populate.cmake
++++ b/cmake/ios-toolchain-populate.cmake
+@@ -1,4 +1,6 @@
+-set(PLATFORM "OS64COMBINED")
++if(NOT DEFINED PLATFORM OR PLATFORM STREQUAL "")
++    set(PLATFORM "OS64COMBINED")
++endif()
+ include(FetchContent)
+ FetchContent_Declare(iostoolchain
+     GIT_REPOSITORY https://github.com/leetal/ios-cmake
+@@ -12,4 +14,4 @@ if(NOT iostoolchain_POPULATED)
+ endif()
+ set(CMAKE_IOS_TOOLCHAIN_FILE ${iostoolchain_SOURCE_DIR}/ios.toolchain.cmake)
+ set_property(GLOBAL PROPERTY IOS_TOOLCHAIN_FILE ${CMAKE_IOS_TOOLCHAIN_FILE})
+-include(${CMAKE_IOS_TOOLCHAIN_FILE})
+\ No newline at end of file
++include(${CMAKE_IOS_TOOLCHAIN_FILE})
+diff --git a/include/ship/audio/AudioPlayer.h b/include/ship/audio/AudioPlayer.h
+index fc89fec2..42cc0a13 100644
+--- a/include/ship/audio/AudioPlayer.h
++++ b/include/ship/audio/AudioPlayer.h
+@@ -76,7 +76,7 @@ class AudioPlayer {
+ #include "WasapiAudioPlayer.h"
+ #endif
+ 
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+ #include "CoreAudioAudioPlayer.h"
+ #endif
+ 
+diff --git a/src/fast/backends/gfx_sdl2.cpp b/src/fast/backends/gfx_sdl2.cpp
+index ddd81805..b4f9d1a3 100644
+--- a/src/fast/backends/gfx_sdl2.cpp
++++ b/src/fast/backends/gfx_sdl2.cpp
+@@ -27,7 +27,9 @@
+ #elif __APPLE__
+ #include <SDL.h>
+ #include "fast/backends/gfx_metal.h"
++#if !defined(__IOS__)
+ #include "ship/utils/macUtils.h"
++#endif
+ #else
+ #include <SDL2/SDL.h>
+ #define GL_GLEXT_PROTOTYPES 1
+@@ -234,7 +236,7 @@ void GfxWindowBackendSDL2::SetFullscreenImpl(bool on, bool call_callback) {
+         }
+     }
+ 
+-#if defined(__APPLE__)
++#if defined(__APPLE__) && !defined(__IOS__)
+     // Implement fullscreening with native macOS APIs
+     if (on != isNativeMacOSFullscreenActive(mWnd)) {
+         toggleNativeMacOSFullscreen(mWnd);
+@@ -693,7 +695,7 @@ void GfxWindowBackendSDL2::HandleEvents() {
+     }
+ 
+     // resync fullscreen state
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+     auto nextFullscreenState = isNativeMacOSFullscreenActive(mWnd);
+     if (mFullScreen != nextFullscreenState) {
+         mFullScreen = nextFullscreenState;
+diff --git a/src/ship/Context.cpp b/src/ship/Context.cpp
+index 34b37a64..cf01f00f 100644
+--- a/src/ship/Context.cpp
++++ b/src/ship/Context.cpp
+@@ -454,8 +454,11 @@ std::string Context::GetAppBundlePath() {
+ #endif
+ 
+ #ifdef __IOS__
+-    const char* home = getenv("HOME");
+-    return std::string(home) + "/Documents";
++    // Immutable resources live in the signed application bundle. Returning
++    // Documents here made iOS look for f3d.o2r/config.yml beside user files
++    // and prevented a ROM-free .app from finding its own packaged data.
++    FolderManager iosFolderManager;
++    return iosFolderManager.getMainBundlePath();
+ #endif
+ 
+ #ifdef __APPLE__
+@@ -523,8 +526,21 @@ std::string Context::GetAppDirectoryPath(std::string appName) {
+ #endif
+ 
+ #ifdef __IOS__
++    // Saves, configuration, logs, and the user-derived BattleShip.o2r belong
++    // in Library/Application Support, not the Files-visible Documents root.
++    // SDL_GetPrefPath creates the directory and matches main()'s early log
++    // path before Context exists.
++    if (appName.empty()) {
++        appName = GetInstance()->mShortName;
++    }
++    char* prefpath = SDL_GetPrefPath(NULL, appName.c_str());
++    if (prefpath != NULL) {
++        std::string ret(prefpath);
++        SDL_free(prefpath);
++        return ret;
++    }
+     const char* home = getenv("HOME");
+-    return std::string(home) + "/Documents";
++    return std::string(home ? home : "") + "/Library/Application Support/" + appName;
+ #endif
+ 
+ #if defined(__APPLE__)
+diff --git a/src/ship/audio/Audio.cpp b/src/ship/audio/Audio.cpp
+index f09a6898..d62b31b8 100644
+--- a/src/ship/audio/Audio.cpp
++++ b/src/ship/audio/Audio.cpp
+@@ -1,6 +1,6 @@
+ #include "ship/audio/Audio.h"
+ 
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+ #include "ship/audio/CoreAudioAudioPlayer.h"
+ #endif
+ 
+@@ -20,7 +20,7 @@ void Audio::InitAudioPlayer() {
+             mAudioPlayer = std::make_shared<WasapiAudioPlayer>(this->mAudioSettings);
+             break;
+ #endif
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+         case AudioBackend::COREAUDIO:
+             mAudioPlayer = std::make_shared<CoreAudioAudioPlayer>(this->mAudioSettings);
+             break;
+@@ -45,7 +45,7 @@ void Audio::Init() {
+ #ifdef _WIN32
+     mAvailableAudioBackends->push_back(AudioBackend::WASAPI);
+ #endif
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+     mAvailableAudioBackends->push_back(AudioBackend::COREAUDIO);
+ #endif
+     mAvailableAudioBackends->push_back(AudioBackend::SDL);
+diff --git a/src/ship/config/Config.cpp b/src/ship/config/Config.cpp
+index 1d340bf6..4e85fe32 100644
+--- a/src/ship/config/Config.cpp
++++ b/src/ship/config/Config.cpp
+@@ -276,7 +276,7 @@ AudioBackend Config::GetCurrentAudioBackend() {
+     return AudioBackend::WASAPI;
+ #endif
+ 
+-#ifdef __APPLE__
++#if defined(__APPLE__) && !defined(__IOS__)
+     return AudioBackend::COREAUDIO;
+ #endif
+ 
+

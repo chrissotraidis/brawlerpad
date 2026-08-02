@@ -4,7 +4,9 @@ Updated: 2026-08-02.
 
 ## Current milestone
 
-Milestone 1 — reproduce BattleShip on Apple Silicon macOS.
+Milestone 4/5 — native iPhone and iPad simulator application plus ROM import
+and on-device asset extraction. iPhone proof is complete; iPad and touch work
+are next.
 
 ## Verified
 
@@ -47,20 +49,40 @@ Milestone 1 — reproduce BattleShip on Apple Silicon macOS.
   run again passed checksum verification and clean shutdown.
 - The save was updated by gameplay; normal window close destroyed the game
   coroutine cleanly, and relaunch returned to the app's normal startup flow.
+- A native arm64 `BrawlerPad.app` now builds for the iOS simulator with an
+  iOS 17.0 deployment target, Metal/SDL presentation, device families 1 and 2,
+  linked Torch, and bundle identifier `com.brawlerpad.app`.
+- A clean iPhone 17 Pro simulator install launches into a visible first-run UI.
+  Its Files picker exposes BrawlerPad Documents and accepts `.z64`, `.n64`, or
+  `.v64` input without embedding game data in the app.
+- The first-run path copied the selected ROM into app-controlled temporary
+  storage, normalized and validated exact SHA-1 `e2929e10...`, ran Torch
+  in-process in 66.7 seconds, installed a 12,114,884-byte archive under
+  Application Support, deleted all picker/import copies, and left the original
+  ROM unchanged.
+- After extraction, the iPhone simulator initialized 32 kHz SDL audio,
+  registered controller input, mounted the generated archive, and visibly
+  rendered the native game through Metal. The tested attract sequence reached
+  a fully rendered Yoshi scene.
+- The finished simulator bundle is 9.7 MiB, arm64, has Files sharing/open-in-
+  place and indirect controller input enabled, and contains no ROM or playable
+  archive. A no-change Release rebuild succeeds in 13 seconds with no source
+  recompilation.
 
 ## In progress
 
+- Exercise the same app on an iPad simulator.
+- Add and tune the HarkinianPad-derived customizable touch controller.
+- Implement and verify iOS lifecycle/audio interruption behavior.
 - Remove absolute developer/build paths from packaged binaries.
-- Begin the mobile-safe reusable core after the results baseline is understood.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 
 ## Not yet claimed
 
 - A BrawlerPad macOS app bundle.
-- Any iOS/iPadOS compile, install, launch, gameplay, or package result.
-- Device testing, touch gameplay, lifecycle recovery, unsigned IPA, or clean
-  checkout reproducibility.
+- iPad runtime proof, physical device testing, touch gameplay, lifecycle
+  recovery, unsigned IPA, or clean-checkout reproducibility.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

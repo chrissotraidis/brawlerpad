@@ -69,3 +69,35 @@
   pinned decomp commit.
 - Wrote the initial architecture, plan, status, build, test, legal, dependency,
   and repository-safety documentation.
+
+## 2026-08-02 — native iPhone simulator and in-process extraction
+
+- Added a CMake/Xcode iOS application target that builds a real arm64
+  `BrawlerPad.app` for iPhone and iPad families, links the decompiled game,
+  libultraship, SDL/Metal, and Torch directly, and packages only ROM-free port
+  resources.
+- Ported Apple-mobile coroutine assembly, sandbox paths, SDL audio selection,
+  Metal window behavior, and desktop-feature exclusions while keeping the
+  native game logic ahead-of-time compiled.
+- Added a UIKit document picker and first-run wizard. The picker accepts only
+  `.z64`, `.n64`, and `.v64`, makes an app-controlled temporary copy, and the
+  C++ path normalizes byte order and validates exact supported ROM hashes
+  before invoking Torch off the UI thread.
+- Split bundle resources from writable Application Support storage and enabled
+  Files sharing/open-in-place plus indirect controller input in the generated
+  plist.
+- Fixed Xcode resource staging and converted relocation, credits, and shader
+  generation to dependency-driven rules with a shared relocation stamp target.
+  A no-change Release build now completes in 13.05 seconds without compiling.
+- Installed the 9.7 MiB ROM-free app into a clean iPhone 17 Pro simulator. The
+  Files picker visibly listed the test ROM in BrawlerPad Documents and returned
+  it to the first-run UI.
+- Completed the full native extraction path: exact ROM SHA-1 validation,
+  66.7-second linked Torch conversion, atomic install of a 12,114,884-byte
+  `BattleShip.o2r` under Application Support, deletion of temporary picker and
+  import copies, and preservation of the original ROM.
+- Verified immediate post-extraction launch: archive mount, 32 kHz SDL audio,
+  controller registration, continuous game frames, and a visibly rendered
+  Metal game scene on the iPhone simulator.
+- Captured the ignored upstream changes as ordered BattleShip and libultraship
+  patches and added a reproducible unsigned simulator build script.
