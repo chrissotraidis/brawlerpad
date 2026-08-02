@@ -28,12 +28,14 @@ stick, A/B/Z triangle, C diamond, and shoulder rails without control overlap.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
 also passed an iPhone Home/resume cycle with a separately accepted,
-non-overlapping phone layout. The bundle contains no ROM or generated playable
-archive.
+non-overlapping phone layout. A native arm64 iPhoneOS build and reproducible
+unsigned proof IPA now pass strict ROM/save/signing/personal-data audits. The
+bundle contains no ROM or generated playable archive; its only `.o2r` is the
+small renderer-shader archive required by Fast3D.
 
 The remaining touch gameplay matrix, extended lifecycle stress, real audio
-interruption/route testing, physical-device testing, and release packaging
-remain in progress. See
+interruption/route testing, physical-device testing, clean-checkout build
+reproduction, and native BrawlerPad macOS packaging remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
@@ -69,7 +71,7 @@ The ROM is hash-checked and linked only into the ignored BattleShip research
 checkout. It is never copied into this repository's tracked project or an app
 package. Full details are in [docs/BUILDING.md](docs/BUILDING.md).
 
-## iPhone and iPad simulator build
+## iPhone and iPad builds
 
 After fetching the pinned sources and patches, build the unsigned arm64 app:
 
@@ -86,9 +88,22 @@ under Application Support, then deletes that copy. See
 The in-game Settings → Input Mappings page can enable or hide the touch
 overlay, change its opacity, and open the layout editor. Phone and tablet
 layouts persist separately. A physical controller hides gameplay controls by
-default while leaving the native menu button available. Version-2 defaults use
-separate HarkinianPad-inspired thumb zones and explicit D-pad/C-button
-accessibility labels.
+default while leaving the native menu button available. Tablet version-2 and
+compact-phone version-3 defaults use separate HarkinianPad-inspired thumb
+zones and explicit D-pad/C-button accessibility labels.
+
+Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible
+ROM-free proof IPA:
+
+```sh
+scripts/build-ios-device.sh
+scripts/package-ios.sh
+```
+
+The IPA is unsigned by design and must be re-signed with the installer's own
+identity before use on a standard physical device. Packaging includes project
+rights notices and discovered source/dependency licenses, then reruns the
+strict package audit.
 
 ## Project documentation
 

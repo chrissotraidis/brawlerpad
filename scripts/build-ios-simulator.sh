@@ -17,6 +17,7 @@ if [ "$(uname -m)" != "arm64" ]; then
 fi
 
 cmake -S "$BATTLESHIP_SOURCE" -B "$BATTLESHIP_BUILD" -G Xcode \
+    -DCMAKE_SYSTEM_NAME=iOS \
     -DPLATFORM=SIMULATORARM64 \
     -DSSB64_VERSION=us
 

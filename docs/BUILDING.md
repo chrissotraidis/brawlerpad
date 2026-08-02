@@ -121,9 +121,51 @@ the native game. A no-change Release rebuild takes approximately 13 seconds on
 the current proof machine and recompiles no source files.
 
 Device signing remains optional and is not part of this simulator command.
-Unsigned device compilation and IPA packaging must not embed a maintainer
-certificate or provisioning profile.
+Unsigned device compilation and IPA packaging use separate commands below and
+must not embed a maintainer certificate or provisioning profile.
 
-Never place a ROM, `BattleShip.o2r`, save, certificate, or profile in an app
-source/resource group. Run `scripts/check-repo-safety.sh` before every commit or
-package operation.
+## Build and package the unsigned iPhoneOS proof
+
+Build a native arm64 app for a generic physical iOS destination without a
+signing identity:
+
+```sh
+scripts/build-ios-device.sh
+```
+
+The output is
+`ref/BattleShip/build-ios-device/Release-iphoneos/BrawlerPad.app`. The script
+verifies the Mach-O platform is iPhoneOS (not Simulator), the only architecture
+is arm64, required Files/controller plist keys are present, no signing material
+is attached, and the full package audit passes.
+
+Create the ignored unsigned proof IPA:
+
+```sh
+scripts/package-ios.sh
+```
+
+The default output is
+`artifacts/BrawlerPad-0.1.0-preview.1-unsigned.ipa`. Packaging copies the app,
+rights and dependency manifests, and license/notice files discovered in both
+the pinned source tree and the selected build's fetched dependencies. It
+normalizes archive timestamps and ordering, then audits the app and IPA. The
+same audited input must produce identical IPA bytes on repeated packaging.
+
+Run either audit explicitly with:
+
+```sh
+scripts/audit-ios-package.sh /absolute/path/to/BrawlerPad.app
+scripts/audit-ios-package.sh /absolute/path/to/BrawlerPad.app \
+  /absolute/path/to/BrawlerPad.ipa
+```
+
+The unsigned IPA is a build and distribution-boundary proof, not an artifact
+that installs unmodified on a standard device. Re-sign it with your own Apple
+identity and provisioning profile outside the repository.
+
+Never place a ROM, playable `BattleShip.o2r`, save, certificate, or profile in
+an app source/resource group. `f3d.o2r` is the sole allowed O2R: the audit
+requires it to be at most 1 MiB and contain only known renderer-shader paths and
+extensions. Run `scripts/check-repo-safety.sh` before every commit or package
+operation.

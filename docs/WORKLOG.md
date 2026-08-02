@@ -178,3 +178,24 @@
   resumed native Metal/touch output, and produced no recent crash report.
 - Captured the exact source delta as ordered BattleShip patch 0006 and verified
   reverse/apply plus byte-for-byte reproduction against the pinned source.
+
+## 2026-08-02 — native device build and unsigned IPA
+
+- Added dedicated generic-iPhoneOS and packaging scripts. Both Apple-mobile
+  CMake entry points now explicitly set `CMAKE_SYSTEM_NAME=iOS`, preventing a
+  fresh device build from configuring host-only TinyCC/funchook targets.
+- Completed a clean Release device configuration and native arm64 build with
+  signing disabled. The app identifies as iPhoneOS, exposes the expected Files
+  and indirect-input capabilities, and has no embedded signature or profile.
+- Distinguished the required 21 KiB `f3d.o2r` Fast3D shader archive from the
+  forbidden ROM-derived `BattleShip.o2r`. The audit permits only that exact
+  path and validates its size, ZIP integrity, entry hierarchy, and shader-only
+  extensions.
+- Added recursive app/IPA guards for ROMs, playable archives, saves, user
+  config/logs, credentials, signing material, Simulator products, unsafe ZIP
+  paths, and personal filesystem strings. Injected ROM, signature, and personal
+  path fixtures each failed for the intended reason.
+- Packaged actual source and fetched-dependency notices (28 files), normalized
+  timestamps and ordering, and proved two independently produced IPAs were
+  byte-identical. The accepted unsigned proof IPA SHA-256 is
+  `4b6bf1daa3356930d136adecd683ae60d7a9914140a9009b78d72b2d14445466`.

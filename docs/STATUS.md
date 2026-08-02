@@ -4,9 +4,10 @@ Updated: 2026-08-02.
 
 ## Current milestone
 
-Milestone 6/7 — customizable touch input, its revised non-overlapping iPad
-layout, and iPad background/foreground recovery are proven. The remaining
-touch gameplay, iPhone lifecycle, and real interruption matrix is next.
+Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
+reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
+partial: the remaining touch gameplay, hardware, lifecycle/audio, clean-
+checkout, and BrawlerPad macOS package work stays explicitly open.
 
 ## Verified
 
@@ -106,6 +107,19 @@ touch gameplay, iPhone lifecycle, and real interruption matrix is next.
   dedicated top-center slot, retains every labeled control in the accessibility
   tree, and passed a Release rebuild plus visible Metal resume. One Home/resume
   cycle preserved PID `18400`, flushed config state, and produced no crash.
+- A clean iPhoneOS CMake/Xcode configuration built an unsigned arm64-only
+  `BrawlerPad.app` for generic iOS. `vtool` identifies platform IOS, the bundle
+  identifier is `com.brawlerpad.app`, and required Files/controller plist keys
+  are enabled.
+- The device app passes a strict recursive audit for ROM/playable O2R, saves,
+  logs, configs, credentials, personal paths, Simulator products, profiles,
+  and signing material. Its sole O2R is a bounded, entry-validated 21 KiB
+  Fast3D shader archive.
+- Two packages from the same audited app produced identical bytes. The 3.4 MiB
+  unsigned IPA has SHA-256 `4b6bf1da...445466`, embeds 28 actual license/notice
+  files plus the rights/dependency manifests, and passed ZIP traversal,
+  extraction, executable-identity, and recursive app audits. Injected ROM,
+  signature, and personal-path fixtures were all rejected.
 
 ## In progress
 
@@ -113,7 +127,7 @@ touch gameplay, iPhone lifecycle, and real interruption matrix is next.
   on physical hardware.
 - Complete touch stage-select, active-match, pause, results, Classic, and
   simultaneous-multitouch acceptance; repeat on iPhone.
-- Remove absolute developer/build paths from packaged binaries.
+- Reproduce source reconstruction and the release build from a fresh checkout.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 
@@ -121,7 +135,7 @@ touch gameplay, iPhone lifecycle, and real interruption matrix is next.
 
 - A BrawlerPad macOS app bundle.
 - Physical device testing, complete touch gameplay, the full lifecycle/audio
-  interruption matrix, unsigned IPA, or clean-checkout reproducibility.
+  interruption matrix, or clean-checkout reproducibility.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

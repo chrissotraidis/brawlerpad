@@ -179,9 +179,29 @@ For macOS `.app`, iPhoneOS `.app`, and IPA:
 - verify unsigned artifacts contain no stale signature material;
 - record SHA-256 checksums.
 
-The upstream package passes the ROM/save/credential/signing-material checks but
-currently fails the personal-path string check. A final BrawlerPad package must
-remove those strings rather than waive the failure.
+The 2026-08-02 native device proof built successfully for generic iPhoneOS with
+an arm64-only 8.4 MiB executable. The unsigned app passed the full audit: iOS
+platform and bundle identity, Files/controller plist capabilities, no valid
+signature or embedded profile, no ROM/playable archive/save/config/log/key,
+and no `/Users` or `/Volumes` path or likely credential in any bundled file.
+
+The app's sole O2R is the 21 KiB `f3d.o2r` renderer archive. Its ZIP contains
+only the expected `shaders/` hierarchy and Metal/MSL/GLSL/Slang/HLSL source;
+the audit rejects other O2R files, unsafe paths, non-shader entries, corruption,
+or a shader archive over 1 MiB.
+
+Two independently created IPAs were byte-identical. The accepted unsigned
+`BrawlerPad-0.1.0-preview.1-unsigned.ipa` is 3.4 MiB with SHA-256
+`4b6bf1daa3356930d136adecd683ae60d7a9914140a9009b78d72b2d14445466`;
+the contained executable has SHA-256
+`6e880f74fd1908d42dd620e5745034d5a95ef98106854aab875b47dc07abb141`.
+The IPA includes 28 license/notice files from pinned sources and fetched build
+dependencies. Negative fixtures proved rejection of injected `.z64` data,
+`_CodeSignature`, and an embedded personal path.
+
+This proves native device compilation and unsigned release packaging, not
+physical-device installation or runtime behavior. Re-sign/install/launch and
+hardware execution remain pending.
 
 ## Definition-of-done flow
 

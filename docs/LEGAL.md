@@ -28,3 +28,7 @@ notices for BattleShip port code, libultraship, Torch, SDL, fonts, controller
 database, and every fetched dependency. `DEPENDENCIES.md` is an engineering
 inventory, not legal advice or a substitute for those texts.
 
+The unsigned iOS packaging workflow copies the rights/dependency manifests and
+the discovered license/notice files from both pinned sources and fetched build
+dependencies. Its audit rejects ROM-derived `BattleShip.o2r`; the only allowed
+O2R is the bounded, entry-validated Fast3D renderer-shader archive `f3d.o2r`.
