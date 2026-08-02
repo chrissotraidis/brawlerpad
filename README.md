@@ -27,9 +27,11 @@ editor. A second HarkinianPad-based grip-layout pass separates the D-pad,
 stick, A/B/Z triangle, C diamond, and shoulder rails without control overlap.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
-bundle contains no ROM or generated playable archive.
+also passed an iPhone Home/resume cycle with a separately accepted,
+non-overlapping phone layout. The bundle contains no ROM or generated playable
+archive.
 
-The remaining touch gameplay matrix, iPhone lifecycle coverage, real audio
+The remaining touch gameplay matrix, extended lifecycle stress, real audio
 interruption/route testing, physical-device testing, and release packaging
 remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)

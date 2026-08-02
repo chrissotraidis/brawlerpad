@@ -160,3 +160,21 @@
   remain physical-device tests.
 - Recorded the layout revision as ordered BattleShip patch 0005 and verified
   clean reverse/apply plus byte-for-byte reproduction against the exact pin.
+
+## 2026-08-02 — phone touch-layout V3 and lifecycle
+
+- Shut down the iPad and verified zero booted devices before booting the iPhone
+  17 Pro as the machine's only simulator.
+- The first phone V2 capture exposed two device-specific collisions: C-down
+  intersected the face cluster and the permanent menu crowded R.
+- Spread Z/A/B below the C diamond and adopted HarkinianPad's dedicated
+  top-center phone gameplay menu, with bottom-center placement while Settings
+  is open. Bumped only the phone profile to V3 so old coordinates cannot
+  silently return.
+- Rebuilt, installed, and visibly accepted the compact layout. Every control
+  remained exposed with an explicit accessibility name, touch Start produced a
+  visible scene transition, and all touch groups were visually separate.
+- A five-second Home/resume cycle retained PID `18400`, flushed configuration,
+  resumed native Metal/touch output, and produced no recent crash report.
+- Captured the exact source delta as ordered BattleShip patch 0006 and verified
+  reverse/apply plus byte-for-byte reproduction against the pinned source.

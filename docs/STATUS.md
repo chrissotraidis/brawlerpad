@@ -100,11 +100,17 @@ touch gameplay, iPhone lifecycle, and real interruption matrix is next.
   resumes those paths on foreground events. Three visible iPad Home/resume
   cycles preserved each running PID, updated the config file on background,
   restored Metal and touch presentation, and left zero recent crash reports.
+- The iPhone 17 Pro simulator was brought up only after shutting down the iPad.
+  Its first V2 screenshot exposed C-down/face-button and menu/R collisions.
+  Phone V3 separates the C diamond from A/B/Z, moves the gameplay menu to a
+  dedicated top-center slot, retains every labeled control in the accessibility
+  tree, and passed a Release rebuild plus visible Metal resume. One Home/resume
+  cycle preserved PID `18400`, flushed config state, and produced no crash.
 
 ## In progress
 
-- Repeat lifecycle recovery on iPhone and verify real audio interruptions and
-  route changes on physical hardware.
+- Extend lifecycle stress and verify real audio interruptions and route changes
+  on physical hardware.
 - Complete touch stage-select, active-match, pause, results, Classic, and
   simultaneous-multitouch acceptance; repeat on iPhone.
 - Remove absolute developer/build paths from packaged binaries.
@@ -114,8 +120,8 @@ touch gameplay, iPhone lifecycle, and real interruption matrix is next.
 ## Not yet claimed
 
 - A BrawlerPad macOS app bundle.
-- Physical device testing, complete touch gameplay, iPhone lifecycle recovery,
-  unsigned IPA, or clean-checkout reproducibility.
+- Physical device testing, complete touch gameplay, the full lifecycle/audio
+  interruption matrix, unsigned IPA, or clean-checkout reproducibility.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

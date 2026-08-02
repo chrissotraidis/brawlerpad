@@ -59,12 +59,12 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Pending | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
+| Touch menus and gameplay | Partial pass (V3 layout, Start delivery) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
-| Audio/interruption/routes | 32 kHz init only | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
-| Background/foreground | Pending | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
+| Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
+| Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
 | Save/update persistence | Pending | Pending | Pending |
-| Rotation/safe areas/aspect | Pending | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
+| Rotation/safe areas/aspect | Partial pass (both landscape sides, V3 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
 
 ### iPhone first-run proof
 
@@ -123,8 +123,8 @@ Mode Select highlight to VS Mode, touch A reached VS Start and character
 select, and touch B returned to the parent menu. The editor visibly resized A,
 marked it hidden, restored defaults, and saved with Done. Automatic controller
 hide and its manual override were both observed. Stage select, sustained
-analog gameplay, pause, results, Classic, simultaneous touches, and the iPhone
-profile remain open and are not claimed by this partial pass.
+analog gameplay, pause, results, Classic, and simultaneous touches remain open
+and are not claimed by this partial pass.
 
 The first screenshot audit found the D-pad inside the analog footprint and the
 right-side controls collapsed into a dense stack. The rebuilt `tablet-v2`
@@ -135,7 +135,15 @@ landscape Simulator captures showed no touch-control intersections. The
 profile version intentionally prevents prior `tablet-v1` coordinates from
 silently restoring the rejected defaults; Reset now returns to V2.
 
-## iPad lifecycle coverage
+The iPhone was booted only after the iPad had shut down. Its first V2 capture
+showed C-down intersecting Z/A and the menu crowding R. Phone V3 spreads A/B/Z
+below the C diamond, moves the gameplay menu to top center, and moves that menu
+to bottom center while Settings is open. The accepted landscape capture shows
+all groups separated and the accessibility tree names all 15 buttons plus the
+analog stick. Touch Start produced a visible game transition. Extended phone
+menu/gameplay coverage and simultaneous-touch stress remain open.
+
+## Apple-mobile lifecycle coverage
 
 The lifecycle-enabled Release build was exercised through three visible Home
 and foreground cycles on the sole booted iPad Pro simulator. For the first two
@@ -150,6 +158,12 @@ This proves iPad background/foreground recovery and the frame/audio pause
 plumbing exercised by SDL application events. It does not prove audible audio
 interruption behavior, route changes, suspension under memory pressure, or
 physical-device timing; those remain explicit hardware tests.
+
+The sole simulator was then switched to iPhone 17 Pro with a verified
+zero-booted interval. One five-second Home/resume cycle retained PID `18400`,
+updated the configuration file, returned the already-running process, restored
+the Metal game and phone V3 overlay, and left zero recent crash reports. More
+cycles, OS interruption injection, and physical-device timing remain pending.
 
 ## Package audit
 
