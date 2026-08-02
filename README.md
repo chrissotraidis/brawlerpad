@@ -18,10 +18,12 @@ The initial upstream Metal results-screen regression is fixed by a small,
 reproducible BrawlerPad patch. A native arm64 iOS simulator app also now builds,
 installs, opens a ROM through Files, validates it, runs Torch extraction
 in-process, and launches the Metal-rendered game on an iPhone simulator. The
-app bundle contains no ROM or generated playable archive.
+same bundle has completed Files import, linked extraction, and native Metal
+boot on an iPad simulator, with form-factor-aware setup UI. The app bundle
+contains no ROM or generated playable archive.
 
-iPad runtime coverage, customizable touch controls, lifecycle recovery,
-physical-device testing, and release packaging remain in progress. See
+Customizable touch controls, lifecycle recovery, physical-device testing, and
+release packaging remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 

@@ -101,3 +101,20 @@
   Metal game scene on the iPhone simulator.
 - Captured the ignored upstream changes as ordered BattleShip and libultraship
   patches and added a reproducible unsigned simulator build script.
+
+## 2026-08-02 — native iPad replay and form-factor UI
+
+- Reinstalled the same ROM-free arm64 bundle on an iPad Pro 13-inch (M5)
+  simulator while keeping every other simulator shut down.
+- Completed the native Files-picker and linked-Torch path from a clean tablet
+  container, including exact supported-ROM validation, temporary-copy cleanup,
+  archive mount, 32 kHz SDL audio/controller initialization, and visible Metal
+  gameplay.
+- Recorded that equal-size iPhone and iPad extraction artifacts have different
+  whole-ZIP hashes; cross-run acceptance therefore relies on exact input hash,
+  successful content mount, and runtime proof instead of container-byte
+  identity.
+- Adapted the reference port's compact/tablet ImGui base-scale rule and also
+  scaled BattleShip's hard-coded first-run dimensions. Two visual iPad passes
+  caught and then eliminated clipped guidance and a truncated Choose ROM
+  button; the rebuilt app subsequently reached the Metal opening sequence.

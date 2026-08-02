@@ -1,0 +1,21 @@
+diff --git a/src/ship/window/gui/Gui.cpp b/src/ship/window/gui/Gui.cpp
+--- a/src/ship/window/gui/Gui.cpp
++++ b/src/ship/window/gui/Gui.cpp
+@@ -117,6 +117,17 @@ void Gui::Init(GuiWindowInitData windowImpl) {
+     // Scale everything by 2 for Android
+     ImGui::GetStyle().ScaleAllSizes(2.0f);
+     mImGuiIo->FontGlobalScale = 2.0f;
++#elif defined(__IOS__)
++    SDL_Rect displayBounds = {};
++    float uiScale = 1.0f;
++    if (SDL_GetDisplayUsableBounds(0, &displayBounds) == 0) {
++        const int shortestSide = displayBounds.w < displayBounds.h ? displayBounds.w : displayBounds.h;
++        if (shortestSide >= 600) {
++            uiScale = 2.0f;
++        }
++    }
++    ImGui::GetStyle().ScaleAllSizes(uiScale);
++    mImGuiIo->FontGlobalScale = uiScale;
+ #endif
+ 
+     mImGuiIniPath = Context::GetPathRelativeToAppDirectory("imgui.ini");

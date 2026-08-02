@@ -5,8 +5,8 @@ Updated: 2026-08-02.
 ## Current milestone
 
 Milestone 4/5 — native iPhone and iPad simulator application plus ROM import
-and on-device asset extraction. iPhone proof is complete; iPad and touch work
-are next.
+and on-device asset extraction. Phone and tablet runtime proof is complete;
+touch and lifecycle work are next.
 
 ## Verified
 
@@ -68,10 +68,17 @@ are next.
   place and indirect controller input enabled, and contains no ROM or playable
   archive. A no-change Release rebuild succeeds in 13 seconds with no source
   recompilation.
+- A clean iPad Pro 13-inch (M5) simulator replay completed the same Files
+  selection, exact ROM validation, linked extraction, temporary-copy cleanup,
+  archive mount, SDL audio/controller initialization, and visible native Metal
+  boot. The equal-size generated ZIP archive is not byte-deterministic across
+  runs, so its per-run hash is recorded as evidence rather than a build input.
+- iOS UI scaling now selects a 1x compact-phone or 2x tablet base from SDL's
+  usable display bounds. The iPad first-run window also scales its explicit
+  widths, and visual reinspection proved readable text and unclipped controls.
 
 ## In progress
 
-- Exercise the same app on an iPad simulator.
 - Add and tune the HarkinianPad-derived customizable touch controller.
 - Implement and verify iOS lifecycle/audio interruption behavior.
 - Remove absolute developer/build paths from packaged binaries.
@@ -81,8 +88,8 @@ are next.
 ## Not yet claimed
 
 - A BrawlerPad macOS app bundle.
-- iPad runtime proof, physical device testing, touch gameplay, lifecycle
-  recovery, unsigned IPA, or clean-checkout reproducibility.
+- Physical device testing, touch gameplay, lifecycle recovery, unsigned IPA,
+  or clean-checkout reproducibility.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

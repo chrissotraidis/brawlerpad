@@ -56,12 +56,12 @@ and complete a match, background/foreground, terminate, and relaunch.
 
 | Area | iPhone simulator | iPad simulator | Physical device |
 |---|---|---|---|
-| Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pending | Pending |
-| Metal/game render | Pass (visible native attract scene) | Pending | Pending |
-| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pending | Pending |
+| Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
+| Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
+| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
 | Touch menus and gameplay | Pending | Pending | Pending |
-| Controller connect/reconnect | SDL registration only | Pending | Pending |
-| Audio/interruption/routes | 32 kHz init only | Pending | Pending |
+| Controller connect/reconnect | SDL registration only | SDL registration only | Pending |
+| Audio/interruption/routes | 32 kHz init only | 32 kHz init only | Pending |
 | Background/foreground | Pending | Pending | Pending |
 | Save/update persistence | Pending | Pending | Pending |
 | Rotation/safe areas/aspect | Pending | Pending | Pending |
@@ -85,6 +85,27 @@ frames; the Simulator visibly rendered the game through Metal.
 The no-change Release build completed in 13.05 seconds and invoked no compiler
 or linker steps. This verifies that generated relocation, credits, and shader
 artifacts are dependency-driven instead of forcing a full rebuild.
+
+### iPad first-run proof
+
+The 2026-08-02 iPad Pro 13-inch (M5) simulator run also began from a clean
+install. The native Files picker selected the same supported ROM, the app
+validated exact SHA-1 `e2929e10fccc0aa84e5776227e798abc07cedabf`, completed
+linked Torch extraction, removed its temporary import and picker copies, and
+left the original unchanged. It produced a 12,114,884-byte archive and then
+mounted it, initialized 32 kHz SDL audio and controller registration, and
+visibly rendered the native Metal opening sequence.
+
+The iPad archive's observed SHA-1 was
+`fca952b01f5d11d7d1ba8c87be96e1d54b3fc667`, different from the equal-size
+iPhone artifact because the generated ZIP container is not byte-deterministic.
+Tests therefore verify the supported ROM hash, archive size/mount, and runtime
+contents rather than requiring identical archive hashes across extractions.
+The first visual pass also exposed undersized tablet UI; the corrected build
+uses a 2x base scale when the shortest usable display side is at least 600
+points and scales the first-run window's explicit dimensions with it. A clean
+reinstall showed readable, unclipped guidance and a complete Choose ROM button,
+then the preserved generated archive booted the game again.
 
 ## Touch coverage
 
