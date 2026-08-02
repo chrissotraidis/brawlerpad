@@ -54,5 +54,18 @@
   window remains solid white and cannot yet return to menus. The Metal
   screenshot hook also logs success while writing no files, so it cannot be
   used as visual proof.
+- Added results-scene tick and transition split controls in the ignored
+  research checkout. Disabling both transition objects produced a correct
+  populated results screen. Keeping only camera GObj `0x20000002` reproduced
+  the solid-white failure, proving the persistent empty transition camera was
+  the cause rather than replay metadata, result logic, or framebuffer capture.
+- Added a PORT-only decomp patch that ejects the paired transition camera when
+  the wipe mesh animation finishes. Removed every diagnostic control, rebuilt,
+  and reran with the normal transition enabled. The original wipe is retained,
+  the results UI renders correctly, the 3,600-frame checksum passes, the camera
+  and mesh are both ejected, and frame-5,000 shutdown remains clean.
+- Made the ordered patch reproducible and idempotent through
+  `scripts/clone-sources.sh`; verified clean reverse/apply behavior at the exact
+  pinned decomp commit.
 - Wrote the initial architecture, plan, status, build, test, legal, dependency,
   and repository-safety documentation.

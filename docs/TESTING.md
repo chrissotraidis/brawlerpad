@@ -9,10 +9,10 @@ observable runtime result. Compilation alone is not a pass.
 |---|---|---|
 | Clean configure and build | command, exit status, artifact architecture | Pass (local Release baseline; clean-checkout rerun pending) |
 | User data extraction | Torch exit/log and generated archive outside Git | Pass (local baseline) |
-| Metal rendering | renderer log plus visible frame | Pass through live match; results presentation fails white |
+| Metal rendering | renderer log plus visible frame | Pass through match and populated results with BrawlerPad patch |
 | Audio | audible output and stable stream log | Non-zero synthesis pass; audible pending |
 | Physical/mapped input | menu and gameplay actions | SDL mappings load; automation delivery and physical controller pending |
-| Full versus flow | character select through results and return | Match and results-scene entry pass; visible results fails; return pending |
+| Full versus flow | character select through results and return | Match and visible results pass; mapped return input pending |
 | Save/relaunch | save file, clean exit, restored state | Save/update, clean exit, and relaunch pass; content-level persistence check pending |
 
 ### Deterministic match proof
@@ -32,9 +32,16 @@ Expected verifier line:
 SSB64 Replay: playback verify frames=3600 expected=0xC47FF9C5 actual=0xC47FF9C5 result=PASS
 ```
 
-Current visual result: combat is visible and scene 24 (`VSResults`) initializes,
-including both result fighters. The window becomes solid white and stays white
-while frames continue. This is a baseline fail, not a crash or hang.
+The untouched baseline enters scene 24 (`VSResults`) and initializes both
+fighters, but its window stays white. The BrawlerPad decomp patch retires the
+PORT transition camera when the wipe mesh ends. With that patch, the original
+transition is retained and the full results UI (scores, placements, fighters,
+winner text, wallpaper, and confetti) is visibly correct.
+
+The final patched replay proof again reports the expected 3,600-frame checksum,
+logs ejection of camera GObj `0x20000002` followed by transition GObj
+`0x20000000`, reaches visible results, exits at frame 5,000, destroys the game
+coroutine, and returns from `PortGameShutdown`.
 
 BattleShip's `SSB64_SCREENSHOT_FRAMES` hook reports successful captures on
 Metal but emits no PNG files. Until that backend hook is implemented, use a

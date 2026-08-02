@@ -14,10 +14,11 @@ now compiles and runs natively on Apple Silicon through Metal, validates and
 extracts the local reference ROM, completes a deterministic one-minute match,
 persists a save, relaunches, and packages as a ROM-free `.app` and DMG.
 
-The upstream baseline still has a reproducible macOS Metal defect at the end
-of that match: the results scene advances internally but the window remains
-white. Fixing that regression and creating the mobile-safe BrawlerPad core are
-the current work.
+The initial upstream Metal results-screen regression is now fixed by a small,
+reproducible BrawlerPad patch: the native port retires the photo-transition
+camera when its wipe mesh finishes. The complete match and populated results
+screen now render correctly. Physical-controller/audible-output confirmation
+and the mobile-safe BrawlerPad core are the current work.
 
 No iOS/iPadOS build or release is claimed yet. See [current status](docs/STATUS.md)
 and the [implementation plan](docs/PLAN.md) for evidence and remaining work.

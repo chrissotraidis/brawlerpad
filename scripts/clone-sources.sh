@@ -27,10 +27,26 @@ clone_at_pin() {
     git -C "$destination" checkout --detach "$pin"
 }
 
+apply_patch_once() {
+    local checkout="$1"
+    local patch_file="$2"
+
+    if git -C "$checkout" apply --check "$patch_file" >/dev/null 2>&1; then
+        git -C "$checkout" apply "$patch_file"
+    elif git -C "$checkout" apply --reverse --check "$patch_file" >/dev/null 2>&1; then
+        echo "Patch already applied: $patch_file"
+    else
+        echo "Patch does not apply cleanly: $patch_file" >&2
+        exit 1
+    fi
+}
+
 clone_at_pin "$BATTLESHIP_REPO" "$BRAWLERPAD_REF/BattleShip" "$BATTLESHIP_PIN"
 git -C "$BRAWLERPAD_REF/BattleShip" submodule update --init --recursive
 git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
     'git config remote.origin.pushurl disabled://brawlerpad-reference-input'
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/decomp" \
+    "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 
@@ -38,4 +54,3 @@ test "$(git -C "$BRAWLERPAD_REF/BattleShip" rev-parse HEAD)" = "$BATTLESHIP_PIN"
 test "$(git -C "$BRAWLERPAD_REF/harkinianpad" rev-parse HEAD)" = "$HARKINIANPAD_PIN"
 
 echo "Pinned reference sources are ready under $BRAWLERPAD_REF"
-

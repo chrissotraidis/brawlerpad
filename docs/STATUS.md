@@ -39,14 +39,17 @@ Milestone 1 — reproduce BattleShip on Apple Silicon macOS.
   match. BattleShip verified all 3,600 frames with rolling checksum
   `0xC47FF9C5`, entered the VS results scene, continued frames, and exited
   cleanly at the requested 5,000-frame bound.
+- A BrawlerPad patch fixes the upstream Metal white-results regression. Split
+  controls proved the persistent transition camera—not replay state, results
+  data, framebuffer photo mesh, or ordinary results cameras—covered the scene.
+  Retiring that camera with its finished wipe restores the populated results
+  UI while retaining the original transition. The production-shaped patched
+  run again passed checksum verification and clean shutdown.
 - The save was updated by gameplay; normal window close destroyed the game
   coroutine cleanly, and relaunch returned to the app's normal startup flow.
 
 ## In progress
 
-- Diagnose the reproducible upstream Metal result-screen failure: scene 24
-  initializes and advances, but the presented window stays solid white after
-  the match-to-results transition.
 - Remove absolute developer/build paths from packaged binaries.
 - Begin the mobile-safe reusable core after the results baseline is understood.
 - Audible-output confirmation and physical-controller testing remain pending;

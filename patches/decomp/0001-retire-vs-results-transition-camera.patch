@@ -1,0 +1,23 @@
+diff --git a/src/lb/lbtransition.c b/src/lb/lbtransition.c
+index 8e3a4f693..ec41cfc63 100644
+--- a/src/lb/lbtransition.c
++++ b/src/lb/lbtransition.c
+@@ -236,6 +236,18 @@ void lbTransitionProcUpdate(GObj *gobj)
+     
+     if (gobj->anim_frame <= 0.0F)
+     {
++#ifdef PORT
++        /* The VS-results transition camera is a separate GObj. On N64 an
++         * empty transition camera is harmless after the wipe mesh ends, but
++         * the native renderer continues presenting its empty DL buffer over
++         * every results camera. Retire the paired camera with the mesh. */
++        GObj *camera_gobj = gcFindGObjByID(0x20000002);
++
++        if (camera_gobj != NULL)
++        {
++            gcEjectGObj(camera_gobj);
++        }
++#endif
+         gcEjectGObj(gobj);
+     }
+ }

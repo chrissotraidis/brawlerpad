@@ -19,7 +19,9 @@ scripts/clone-sources.sh
 ```
 
 This clones BattleShip recursively and the HarkinianPad reference into ignored
-`ref/`, checks out exact commits, and disables push URLs.
+`ref/`, checks out exact commits, disables push URLs, and applies the ordered
+BrawlerPad patch series idempotently. The first patch is the PORT-only VS
+results transition-camera lifetime fix under `patches/decomp/`.
 
 ## Build the untouched BattleShip macOS baseline
 
