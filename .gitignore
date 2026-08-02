@@ -1,0 +1,39 @@
+# macOS metadata
+.DS_Store
+
+# Local research checkouts and user-supplied game data. Repositories are
+# reproduced by scripts and pinned in docs; nothing under ref/ is shipped.
+/ref/*
+!/ref/README.md
+
+# Nintendo 64 ROMs and derived game assets must never be committed or packaged.
+*.n64
+*.z64
+*.v64
+*.rom
+*.otr
+*.o2r
+*.zip
+
+# Build products and local IDE state
+/build/
+/build-*/
+/DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM
+*.dSYM.zip
+xcuserdata/
+*.xcuserstate
+CMakeUserPresets.json
+
+# Local configuration, credentials, and signing material
+.env
+.env.*
+!.env.example
+*.mobileprovision
+*.p12
+*.cer
+*.key
+*.pem
+
