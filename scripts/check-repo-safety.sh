@@ -26,7 +26,12 @@ if [ -n "$forbidden_files" ]; then
 fi
 
 if git rev-parse --verify HEAD >/dev/null 2>&1; then
-    history_paths="$(git rev-list --objects --all | awk 'NF > 1 { sub(/^[^ ]+ /, ""); print }')"
+    # Audit only refs Git can publish. Codex maintains private
+    # refs/codex/turn-diffs snapshots of the working directory; those refs are
+    # never pushed and may record ignored local research inputs that existed
+    # before this repository's first commit.
+    history_paths="$(git rev-list --objects --branches --tags --remotes |
+        awk 'NF > 1 { sub(/^[^ ]+ /, ""); print }')"
     forbidden_history="$(printf '%s\n' "$history_paths" | grep -Ei "$forbidden" || true)"
     history_ref="$(printf '%s\n' "$history_paths" |
         grep '^ref/' | grep -v '^ref/README\.md$' || true)"

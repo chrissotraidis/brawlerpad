@@ -7,13 +7,38 @@ observable runtime result. Compilation alone is not a pass.
 
 | Check | Evidence required | Status |
 |---|---|---|
-| Clean configure and build | command, exit status, artifact architecture | In progress |
-| User data extraction | Torch exit/log and generated archive outside Git | Pending |
-| Metal rendering | renderer log plus visible frame | Pending |
-| Audio | audible output and stable stream log | Pending |
-| Physical/mapped input | menu and gameplay actions | Pending |
-| Full versus flow | character select through results and return | Pending |
-| Save/relaunch | save file, clean exit, restored state | Pending |
+| Clean configure and build | command, exit status, artifact architecture | Pass (local Release baseline; clean-checkout rerun pending) |
+| User data extraction | Torch exit/log and generated archive outside Git | Pass (local baseline) |
+| Metal rendering | renderer log plus visible frame | Pass through live match; results presentation fails white |
+| Audio | audible output and stable stream log | Non-zero synthesis pass; audible pending |
+| Physical/mapped input | menu and gameplay actions | SDL mappings load; automation delivery and physical controller pending |
+| Full versus flow | character select through results and return | Match and results-scene entry pass; visible results fails; return pending |
+| Save/relaunch | save file, clean exit, restored state | Save/update, clean exit, and relaunch pass; content-level persistence check pending |
+
+### Deterministic match proof
+
+Compile `tools/generate-baseline-replay.c` as documented in `BUILDING.md`, then
+run the packaged executable with:
+
+```sh
+SSB64_REPLAY_PLAY=/tmp/brawlerpad-baseline.replay \
+SSB64_MAX_FRAMES=5000 \
+ref/BattleShip/dist/BattleShip.app/Contents/MacOS/BattleShip
+```
+
+Expected verifier line:
+
+```text
+SSB64 Replay: playback verify frames=3600 expected=0xC47FF9C5 actual=0xC47FF9C5 result=PASS
+```
+
+Current visual result: combat is visible and scene 24 (`VSResults`) initializes,
+including both result fighters. The window becomes solid white and stays white
+while frames continue. This is a baseline fail, not a crash or hang.
+
+BattleShip's `SSB64_SCREENSHOT_FRAMES` hook reports successful captures on
+Metal but emits no PNG files. Until that backend hook is implemented, use a
+separate visible-window capture and do not treat its log message as evidence.
 
 ## iOS/iPadOS simulator matrix
 
@@ -56,10 +81,13 @@ For macOS `.app`, iPhoneOS `.app`, and IPA:
 - verify unsigned artifacts contain no stale signature material;
 - record SHA-256 checksums.
 
+The upstream package passes the ROM/save/credential/signing-material checks but
+currently fails the personal-path string check. A final BrawlerPad package must
+remove those strings rather than waive the failure.
+
 ## Definition-of-done flow
 
 ```text
 launch -> user ROM -> extraction -> menus -> character/stage select -> match
 -> results -> menus -> save -> close -> relaunch -> persistence confirmed
 ```
-

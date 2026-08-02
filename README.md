@@ -8,12 +8,16 @@ provide their own legally obtained game data.
 
 ## Status
 
-The project is in the research and macOS-baseline milestone. The selected game
-core is [BattleShip](https://github.com/JRickey/BattleShip), which already runs
-natively on Apple Silicon through Metal and has an Android port with on-device
-Torch extraction and touch input. The local reference ROM has been validated
-against BattleShip's supported US hash. A clean upstream macOS build is being
-reproduced before mobile changes begin.
+The research phase is complete and the selected game core is
+[BattleShip](https://github.com/JRickey/BattleShip). Its pinned upstream build
+now compiles and runs natively on Apple Silicon through Metal, validates and
+extracts the local reference ROM, completes a deterministic one-minute match,
+persists a save, relaunches, and packages as a ROM-free `.app` and DMG.
+
+The upstream baseline still has a reproducible macOS Metal defect at the end
+of that match: the results scene advances internally but the window remains
+white. Fixing that regression and creating the mobile-safe BrawlerPad core are
+the current work.
 
 No iOS/iPadOS build or release is claimed yet. See [current status](docs/STATUS.md)
 and the [implementation plan](docs/PLAN.md) for evidence and remaining work.
@@ -41,7 +45,8 @@ Install the documented tools and libraries, then pass an exact supported US
 ROM to the baseline script:
 
 ```sh
-brew install cmake ninja glew libzip tinyxml2 nlohmann-json spdlog fmt
+brew install cmake ninja python@3.11 glew libzip tinyxml2 nlohmann-json spdlog fmt dylibbundler
+"$(brew --prefix python@3.11)/bin/python3.11" -m pip install --user Pillow
 scripts/build-macos-baseline.sh /absolute/path/to/your/rom.n64
 ```
 
@@ -67,4 +72,3 @@ VetriTheRetri and the SSB64 decompilation contributors, the libultraship and
 Harbour Masters communities, Torch contributors, SDL contributors, and the
 HarkinianPad project. Each dependency retains its own license and rights
 boundary.
-
