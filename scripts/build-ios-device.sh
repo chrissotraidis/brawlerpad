@@ -20,6 +20,7 @@ fi
 cmake -S "$BATTLESHIP_SOURCE" -B "$BATTLESHIP_BUILD" -G Xcode \
     -DCMAKE_SYSTEM_NAME=iOS \
     -DPLATFORM=OS64 \
+    -DBRAWLERPAD_BRANDING=ON \
     -DSSB64_VERSION=us
 
 # Do not let a previously signed build leak a profile or signature into this

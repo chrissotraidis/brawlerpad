@@ -1,0 +1,179 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 77613fe..34c5740 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
+ 
+ project(ssb64 LANGUAGES C CXX)
+ 
++option(BRAWLERPAD_BRANDING "Use BrawlerPad application identity" OFF)
++
+ set(SSB64_MOBILE OFF)
+ if (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     set(SSB64_MOBILE ON)
+@@ -15,7 +17,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+         "Minimum supported iOS/iPadOS version" FORCE)
+     set(DEPLOYMENT_TARGET "17.0" CACHE STRING
+         "Minimum supported iOS/iPadOS version" FORCE)
++endif()
+ 
++if (BRAWLERPAD_BRANDING)
+     # Release binaries must not disclose a maintainer's checkout or build
+     # directory. Apply this at the directory level before any project or
+     # fetched-dependency targets are created so __FILE__ is stable too.
+@@ -245,6 +249,12 @@ if (SSB64_MOBILE)
+ else()
+     # Desktop: build Torch as a host executable via ExternalProject so it
+     # can run at our build time to extract ROM assets.
++    set(SSB64_TORCH_REPRO_ARGS)
++    if(BRAWLERPAD_BRANDING)
++        list(APPEND SSB64_TORCH_REPRO_ARGS
++            "-DCMAKE_C_FLAGS=-ffile-prefix-map=${CMAKE_SOURCE_DIR}=BattleShip -ffile-prefix-map=${CMAKE_BINARY_DIR}=BrawlerPadBuild"
++            "-DCMAKE_CXX_FLAGS=-ffile-prefix-map=${CMAKE_SOURCE_DIR}=BattleShip -ffile-prefix-map=${CMAKE_BINARY_DIR}=BrawlerPadBuild")
++    endif()
+     ExternalProject_Add(TorchExternal
+         PREFIX TorchExternal
+         SOURCE_DIR ${CMAKE_SOURCE_DIR}/torch
+@@ -260,6 +270,7 @@ else()
+             -DBUILD_MARIO_ARTIST=OFF
+             -DBUILD_NAUDIO=ON
+             -DBUILD_SSB64=ON
++            ${SSB64_TORCH_REPRO_ARGS}
+     )
+ 
+     ExternalProject_Get_Property(TorchExternal install_dir)
+@@ -583,7 +594,9 @@ endif()
+ # updater / release links are unaffected. This single value drives the
+ # binary OUTPUT_NAME, the libultraship Context name/shortName (which scopes
+ # the app-data directory), and the per-platform package scripts.
+-if(SSB64_VERSION STREQUAL "jp")
++if(BRAWLERPAD_BRANDING)
++    set(SSB64_APP_NAME "BrawlerPad")
++elseif(SSB64_VERSION STREQUAL "jp")
+     set(SSB64_APP_NAME "BattleShip-JP")
+ else()
+     set(SSB64_APP_NAME "BattleShip")
+diff --git a/port/bridge/lbreloc_bridge.cpp b/port/bridge/lbreloc_bridge.cpp
+index c986cb1..2650481 100644
+--- a/port/bridge/lbreloc_bridge.cpp
++++ b/port/bridge/lbreloc_bridge.cpp
+@@ -347,16 +347,16 @@ static std::shared_ptr<RelocFile> portLoadRelocResource(u32 file_id)
+ 		{
+ 			sExitedOnStaleArchive = true;
+ 			std::string dataDirO2r =
+-			    Ship::Context::GetPathRelativeToAppDirectory("BattleShip.o2r");
++			    Ship::Context::GetPathRelativeToAppDirectory(SSB64_O2R_NAME);
+ 			fprintf(stderr,
+ 			    "\n"
+ 			    "============================================================\n"
+-			    "SSB64 PC port: failed to load asset from BattleShip.o2r\n"
++			    SSB64_APP_NAME ": failed to load an asset from " SSB64_O2R_NAME "\n"
+ 			    "  resource: %s\n"
+ 			    "  file_id:  %u\n"
+ 			    "============================================================\n"
+ 			    "\n"
+-			    "This almost always means your cached BattleShip.o2r was\n"
++			    "This almost always means your cached " SSB64_O2R_NAME " was\n"
+ 			    "packed by an older build whose resource format doesn't\n"
+ 			    "match this binary's registered factory version.\n"
+ 			    "\n"
+@@ -371,7 +371,7 @@ static std::shared_ptr<RelocFile> portLoadRelocResource(u32 file_id)
+ 			    "============================================================\n"
+ 			    "\n",
+ 			    path.c_str(), file_id, dataDirO2r.c_str());
+-			port_log("SSB64: STALE BattleShip.o2r detected — first reloc load failed "
++			port_log("SSB64: stale " SSB64_O2R_NAME " detected — first reloc load failed "
+ 			         "(path=%s file_id=%u). Delete '%s' and re-launch to re-extract.\n",
+ 			         path.c_str(), file_id, dataDirO2r.c_str());
+ 			std::fflush(stderr);
+diff --git a/port/first_run.cpp b/port/first_run.cpp
+index 19e501d..5c10c4c 100644
+--- a/port/first_run.cpp
++++ b/port/first_run.cpp
+@@ -575,7 +575,7 @@ ExtractionResult ExtractAssetsIfNeeded(const std::string& target_o2r_path, bool
+             return { true, targetPath.string(), {}, logPath };
+         }
+         const std::string msg =
+-            "BattleShip failed to extract assets from your ROM.\n\n"
++            SSB64_APP_NAME " failed to extract assets from your ROM.\n\n"
+             "Error:\n  " + commandError +
+             "\n\nCheck the extraction log for details:\n  " + logPath +
+             "\n\nThe most common cause is a non-NTSC-U-v1.0 ROM. Verify your "
+@@ -753,7 +753,7 @@ bool RunFirstRunWizard(const std::string& target_o2r_path) {
+                                        ImGuiWindowFlags_NoMove |
+                                        ImGuiWindowFlags_NoSavedSettings)) {
+                 ImGui::TextWrapped(
+-                    "BattleShip needs to extract assets from your "
++                    SSB64_APP_NAME " needs to extract assets from your "
+                     "Nintendo 64 ROM before it can launch.");
+                 ImGui::Spacing();
+                 ImGui::TextWrapped(
+diff --git a/port/port.cpp b/port/port.cpp
+index f159311..820641a 100644
+--- a/port/port.cpp
++++ b/port/port.cpp
+@@ -669,7 +669,7 @@ static int PortInitImpl(int argc, char* argv[]) {
+ 	sContext = Ship::Context::CreateUninitializedInstance(
+ 		SSB64_APP_NAME,
+ 		SSB64_APP_NAME,
+-		"BattleShip.cfg.json"
++		SSB64_APP_NAME ".cfg.json"
+ 	);
+ 
+ 	if (!sContext) {
+diff --git a/scripts/package-macos.sh b/scripts/package-macos.sh
+index d6713dc..7f2b4d6 100755
+--- a/scripts/package-macos.sh
++++ b/scripts/package-macos.sh
+@@ -42,7 +42,11 @@ VER="${SSB64_VERSION:-us}"
+ [[ "$VER" == "us" || "$VER" == "jp" ]] || { echo "SSB64_VERSION must be us|jp" >&2; exit 1; }
+ BUILD_DIR="$ROOT/build-bundle-$VER"
+ DIST_DIR="$ROOT/dist"
+-if [[ "$VER" == "jp" ]]; then
++if [[ "${BRAWLERPAD_BRANDING:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
++    BUILD_DIR="$ROOT/build-brawlerpad-macos"
++    APP_NAME="BrawlerPad"
++    APP_BUNDLE_ID="com.brawlerpad.app.macos"
++elif [[ "$VER" == "jp" ]]; then
+     APP_NAME="BattleShip-JP"
+     APP_BUNDLE_ID="com.ssb-decomp-re.battleship-jp"
+ else
+@@ -109,11 +113,12 @@ step "Configuring release build with NON_PORTABLE=ON"
+ cmake -B "$BUILD_DIR" "$ROOT" \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DNON_PORTABLE=ON \
++    -DBRAWLERPAD_BRANDING="${BRAWLERPAD_BRANDING:-OFF}" \
+     -DSSB64_VERSION="$VER" \
+     "${CCACHE_ARGS[@]+"${CCACHE_ARGS[@]}"}" \
+     >/dev/null
+ 
+-step "Building BattleShip + torch"
++step "Building $APP_NAME + torch"
+ cmake --build "$BUILD_DIR" -j"$JOBS"
+ 
+ # Build the f3d.o2r shader archive (ROM-independent, just zips the LUS
+@@ -122,7 +127,8 @@ cmake --build "$BUILD_DIR" -j"$JOBS"
+ step "Packaging Fast3D shader archive"
+ F3D_O2R="$BUILD_DIR/f3d.o2r"
+ rm -f "$F3D_O2R"
+-( cd "$ROOT/libultraship/src/fast" && zip -rq "$F3D_O2R" shaders )
++python3 "$ROOT/tools/package_shader_archive.py" \
++    "$ROOT/libultraship/src/fast/shaders" "$F3D_O2R"
+ [[ -f "$F3D_O2R" ]] || fail "f3d.o2r was not created"
+ 
+ # ── 2. Locate built artifacts ──
+@@ -171,6 +177,14 @@ cp "$ROOT/assets/custom/fonts/Inconsolata-OFL.txt"     "$APP/Contents/Resources/
+ # whose compiled code is in this .app. MIT requires the upstream
+ # copyright + permission notice to ride along with redistributed copies.
+ cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
++if [[ -n "${BRAWLERPAD_PROJECT_ROOT:-}" ]]; then
++    [[ -f "$BRAWLERPAD_PROJECT_ROOT/docs/LEGAL.md" ]] ||
++        fail "BrawlerPad LEGAL.md not found under $BRAWLERPAD_PROJECT_ROOT"
++    cp "$BRAWLERPAD_PROJECT_ROOT/docs/LEGAL.md" \
++        "$APP/Contents/Resources/BRAWLERPAD_RIGHTS.md"
++    cp "$BRAWLERPAD_PROJECT_ROOT/docs/DEPENDENCIES.md" \
++        "$APP/Contents/Resources/BRAWLERPAD_DEPENDENCIES.md"
++fi
+ mkdir -p "$APP/Contents/Resources/licenses"
+ if [[ -f "$ROOT/libultraship/LICENSE" ]]; then
+     cp "$ROOT/libultraship/LICENSE" "$APP/Contents/Resources/licenses/libultraship-LICENSE.txt"

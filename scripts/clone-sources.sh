@@ -72,11 +72,13 @@ git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
 # tree once. This avoids asking an early patch to reverse-apply through later
 # edits to the same CMake or source context.
 if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
-       "$BRAWLERPAD_ROOT/patches/battleship/0009-reproducible-device-link.patch" >/dev/null 2>&1 &&
+       "$BRAWLERPAD_ROOT/patches/battleship/0010-brawlerpad-identity-and-macos-package.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/libultraship" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/libultraship/0003-ios-lifecycle-audio.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/decomp" apply --reverse --check \
-       "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch" >/dev/null 2>&1; then
+       "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch" >/dev/null 2>&1 &&
+   git -C "$BRAWLERPAD_REF/BattleShip/torch" apply --reverse --check \
+       "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch" >/dev/null 2>&1; then
     for patch_file in "$BRAWLERPAD_ROOT"/patches/battleship/*.patch; do
         mark_patch_applied "$BRAWLERPAD_REF/BattleShip" "$patch_file"
     done
@@ -85,6 +87,9 @@ if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
     done
     for patch_file in "$BRAWLERPAD_ROOT"/patches/decomp/*.patch; do
         mark_patch_applied "$BRAWLERPAD_REF/BattleShip/decomp" "$patch_file"
+    done
+    for patch_file in "$BRAWLERPAD_ROOT"/patches/torch/*.patch; do
+        mark_patch_applied "$BRAWLERPAD_REF/BattleShip/torch" "$patch_file"
     done
 fi
 
@@ -96,6 +101,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0002-ios-form-factor-ui.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0003-ios-lifecycle-audio.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
+    "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0001-native-apple-mobile-runtime.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
@@ -114,6 +121,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0008-reproducible-shader-archive.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0009-reproducible-device-link.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0010-brawlerpad-identity-and-macos-package.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 
