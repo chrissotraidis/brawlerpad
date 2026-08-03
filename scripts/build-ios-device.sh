@@ -5,6 +5,7 @@ BRAWLERPAD_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BATTLESHIP_SOURCE="$BRAWLERPAD_ROOT/ref/BattleShip"
 BATTLESHIP_BUILD="${1:-$BATTLESHIP_SOURCE/build-ios-device}"
 BUILD_CONFIGURATION="${CONFIGURATION:-Release}"
+DEVICE_SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
 APP="$BATTLESHIP_BUILD/$BUILD_CONFIGURATION-iphoneos/BrawlerPad.app"
 
 if [ ! -f "$BATTLESHIP_SOURCE/CMakeLists.txt" ]; then
@@ -34,6 +35,8 @@ fi
 
 cmake -S "$BATTLESHIP_SOURCE" -B "$BATTLESHIP_BUILD" -G Xcode \
     -DCMAKE_SYSTEM_NAME=iOS \
+    -DCMAKE_OSX_SYSROOT="$DEVICE_SDK" \
+    -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DPLATFORM=OS64 \
     -DBRAWLERPAD_BRANDING=ON \
     -DSSB64_VERSION=us

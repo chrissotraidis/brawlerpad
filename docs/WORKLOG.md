@@ -508,3 +508,32 @@
   switch recovery in Simulator. Audible OS interruptions, real audio-device
   route changes, physical-controller actions/reconnect, true simultaneous
   touch, and physical-device timing remain hardware acceptance work.
+
+## 2026-08-03 — clean release replay and README handoff
+
+- Cloned remote `main` at `d8ef0f8` into isolated temporary storage, fetched
+  all five recorded upstream pins, and replayed every maintained patch without
+  using the primary checkout's generated source or build trees.
+- Built the Apple Silicon macOS app and DMG from that clone. Deep ad-hoc
+  signature verification, package audit, DMG checksum, read-only mount, and
+  contained-app audit passed. The executable retained content-derived UUID
+  `EBBCC693-5DFF-32FE-9202-D4E011F64692`; `f3d.o2r` retained SHA-256
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+- The first empty Simulator cache failed at final link because libzip's early
+  dependency discovery selected iPhoneOS `libz`/`libbz2`. Updated both mobile
+  scripts to supply the absolute `xcrun` SDK root and arm64 architecture to
+  CMake before dependency discovery. A second empty cache selected only
+  `iPhoneSimulator26.5.sdk` libraries and completed bundle validation.
+- Completed a separate clean generic-iPhoneOS arm64 configure, build, and
+  recursive app audit. The Simulator and device executable SHA-256 values are
+  `c7d645285f1417036365adc9b2ad9b2d9768f3d6d28d1bd84876677b503d0830`
+  and `c01aa9f9af0e07ae19114af1efdecdd256ebf227352667eb328c1bba7564f7ea`.
+- Packaged the exact clean device app twice. Both complete audits passed and
+  the files were byte-identical at SHA-256
+  `e81a061c7034ae97d5e431f195b141246bd02d7733ffbe7ad1de0dbcdda2400c`.
+- Reworked the README toward HarkinianPad's approachable project handoff:
+  install-status table, first-launch and touch guidance, current screenshot,
+  supported features, FAQ, reproducibility flow, project map, contribution
+  expectations, and explicit legal/hardware boundaries.
+- Kept the iPad Pro 13-inch (M5) as the sole booted simulator for the full pass;
+  no build or packaging step booted another simulator.

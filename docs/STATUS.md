@@ -6,9 +6,10 @@ Updated: 2026-08-03.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: the branded macOS package and complete single-contact iPhone and iPad
-touch VS flows are proven, while simultaneous multitouch, physical hardware,
-and the remaining lifecycle/audio work stay explicitly open.
+partial: a fresh remote clone now reproduces every release build and audit, and
+the branded macOS package plus complete single-contact iPhone and iPad touch VS
+flows are proven. Simultaneous multitouch, physical hardware, and the remaining
+lifecycle/audio work stay explicitly open.
 
 ## Verified
 
@@ -246,6 +247,25 @@ and the remaining lifecycle/audio work stay explicitly open.
   The content-derived normalization pipeline retains its independent-checkout
   proof; raw ad-hoc signature and DMG-container bytes remain non-stable
   packaging metadata.
+- A final remote-clone replay started at commit `d8ef0f8`, fetched the exact
+  BattleShip, decomp, libultraship, Torch, and HarkinianPad pins, and replayed
+  every maintained patch. The arm64 macOS app and DMG passed signature,
+  checksum, mount, and contained-app audits; the executable retained UUID
+  `EBBCC693-5DFF-32FE-9202-D4E011F64692`, and `f3d.o2r` retained SHA-256
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+- That replay exposed a fresh-cache Simulator linker defect: dependency
+  discovery selected iPhoneOS `libz`/`libbz2` before the downstream iOS
+  toolchain populated its Simulator sysroot. Both mobile build scripts now pin
+  CMake to the exact SDK returned by `xcrun` before dependency discovery. A new
+  clean cache then resolved only Simulator libraries and produced a validated
+  arm64 iOS Simulator app; executable SHA-256 is
+  `c7d645285f1417036365adc9b2ad9b2d9768f3d6d28d1bd84876677b503d0830`.
+- The same checkout produced and recursively audited a generic arm64 iPhoneOS
+  app with platform IOS, minimum iOS 17.0, and executable SHA-256
+  `c01aa9f9af0e07ae19114af1efdecdd256ebf227352667eb328c1bba7564f7ea`.
+  Two packages from that exact app were byte-identical at IPA SHA-256
+  `e81a061c7034ae97d5e431f195b141246bd02d7733ffbe7ad1de0dbcdda2400c`.
+  The iPad Pro 13-inch (M5) remained the machine's sole booted simulator.
 
 ## In progress
 

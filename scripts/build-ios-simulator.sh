@@ -5,6 +5,7 @@ BRAWLERPAD_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BATTLESHIP_SOURCE="$BRAWLERPAD_ROOT/ref/BattleShip"
 BATTLESHIP_BUILD="${1:-$BATTLESHIP_SOURCE/build-ios-sim}"
 BUILD_CONFIGURATION="${CONFIGURATION:-Release}"
+SIMULATOR_SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 
 if [ ! -f "$BATTLESHIP_SOURCE/CMakeLists.txt" ]; then
     echo "Pinned sources are missing; run scripts/clone-sources.sh first." >&2
@@ -18,6 +19,8 @@ fi
 
 cmake -S "$BATTLESHIP_SOURCE" -B "$BATTLESHIP_BUILD" -G Xcode \
     -DCMAKE_SYSTEM_NAME=iOS \
+    -DCMAKE_OSX_SYSROOT="$SIMULATOR_SDK" \
+    -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DPLATFORM=SIMULATORARM64 \
     -DBRAWLERPAD_BRANDING=ON \
     -DSSB64_VERSION=us

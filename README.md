@@ -1,10 +1,61 @@
 # BrawlerPad
 
+<p align="center">
+  <strong>Super Smash Bros. 64 rebuilt as a native Apple-platform port.</strong><br>
+  Metal rendering, Files-based ROM setup, physical-controller plumbing, and
+  customizable iPhone/iPad touch controls.
+</p>
+
+<p align="center">
+  <img alt="iOS and iPadOS 17+" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-17%2B-0A84FF?logo=apple">
+  <img alt="Apple Silicon macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple">
+  <img alt="Metal renderer" src="https://img.shields.io/badge/renderer-Metal-5E5CE6">
+  <img alt="ROM not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
+</p>
+
 BrawlerPad is an unofficial native iOS, iPadOS, and Apple Silicon macOS
 porting project based on reverse-engineered game code. It is not a
 general-purpose Nintendo 64 emulator and is not affiliated with or endorsed by
 Nintendo. No ROM or original copyrighted game assets are included. Users must
 provide their own legally obtained game data.
+
+![BrawlerPad running on the iPad Simulator with the Tablet V4 touch layout](docs/readme/brawlerpad-ipad-touch-v4.png)
+
+The screenshot is from the current iPad Simulator build using locally supplied
+game data. Neither that game data nor a playable generated archive is part of
+this repository or its packages.
+
+## Install status
+
+| Option | Status | What to do |
+|---|---|---|
+| Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
+| iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
+| Unsigned iPhone/iPad IPA | **Buildable now** | Run `scripts/build-ios-device.sh` and `scripts/package-ios.sh`, then re-sign the audited IPA with your own identity. |
+| Signed physical-device build | **Not yet accepted** | Local signing is possible, but the complete hardware test matrix remains open. |
+| App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
+
+## Get started
+
+You need an Apple Silicon Mac, Xcode and its command-line tools, the dependencies
+listed in [the build guide](docs/BUILDING.md), and your own legally obtained
+supported US ROM. Then run:
+
+```sh
+git clone https://github.com/chrissotraidis/brawlerpad.git
+cd brawlerpad
+scripts/clone-sources.sh
+
+# Choose one or more targets.
+scripts/build-macos-app.sh
+scripts/build-ios-simulator.sh
+scripts/build-ios-device.sh
+scripts/package-ios.sh
+```
+
+All generated source trees, build products, packages, ROMs, and extracted game
+archives stay outside Git. Simulator and physical-device installation commands
+are documented in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Status
 
@@ -25,12 +76,11 @@ as physical controllers; iPad testing now covers title/menu navigation,
 VS setup, character and stage select, a complete one-minute match and results
 return, Classic character selection/live combat/pause, controller auto-hide,
 the move/resize/hide/reset editor, and save/settings migration through relaunch
-and in-place reinstall. The current tablet V3 pass incorporates
-HarkinianPad's later physical-iPad refinements: D-pad and stick occupy separate
-left-thumb zones, Start/R/L form one right shoulder stack, A/B/Z form a distinct
-triangle, and the C diamond sits below it. A separate tall-window profile and
-lighter idle treatment prevent the compressed, game-obscuring layout seen in
-the rejected tablet V2 capture. A
+and in-place reinstall. The current Tablet V4 layout restores HarkinianPad's
+accepted physical-iPad split: D-pad and stick occupy separate left-thumb zones,
+Z sits between them, and Start/R/L, A/B, and the C diamond occupy independent
+right-side groups. A separate tall-window profile and lighter idle treatment
+prevent the compressed, game-obscuring layout seen in earlier captures. A
 follow-up phone V5 pass uses HarkinianPad's physically accepted iPhone
 geometry: L and Z return to the left grip, Start/R stay on the upper-right
 rail, and compact C/A/B groups sit under the right thumb with visible gaps
@@ -147,21 +197,153 @@ identity before use on a standard physical device. Packaging includes project
 rights notices and discovered source/dependency licenses, then reruns the
 strict package audit.
 
-## Project documentation
+## First launch
 
-- [Plan](docs/PLAN.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Building](docs/BUILDING.md)
-- [Testing](docs/TESTING.md)
-- [Status](docs/STATUS.md)
-- [Worklog](docs/WORKLOG.md)
-- [Legal and rights boundary](docs/LEGAL.md)
-- [Pinned dependencies](docs/DEPENDENCIES.md)
+BrawlerPad never downloads or bundles game data.
 
-## Credits
+1. Launch the app and choose **Select ROM**.
+2. Pick your legally obtained supported US ROM through Files or the macOS file
+   picker.
+3. BrawlerPad copies it into temporary app-controlled storage and validates its
+   exact size and hash.
+4. Linked Torch generates `BrawlerPad.o2r` under Application Support.
+5. The temporary import is deleted and the native Metal game launches.
+
+The supported ROM SHA-1 is
+`e2929e10fccc0aa84e5776227e798abc07cedabf`. Invalid files are rejected without
+altering the source document or leaving temporary copies behind.
+
+## Touch controls
+
+- **Left:** D-pad, Z, and analog stick in separate iPad thumb zones.
+- **Right:** Start/R/L rail, A/B face buttons, and an independent C diamond.
+- **Menu:** the persistent `•••` button remains available when gameplay controls
+  are hidden.
+- **Customize:** Settings → Input Mappings changes opacity and opens the editor
+  for move, 70–150% resize, hide/show, reset, and save.
+- **Profiles:** phone, landscape tablet, and tall/portrait tablet layouts persist
+  separately.
+- **Controllers:** gameplay touch controls hide automatically by default when a
+  physical controller is connected; this can be disabled.
+
+Every touch target feeds the same normalized SDL/ControlDeck player-one path as
+physical controllers. Opening the native menu cancels held input and removes the
+gameplay overlay until the menu closes.
+
+## What works
+
+| Area | Current result |
+|---|---|
+| Native apps | Apple Silicon macOS, arm64 iOS Simulator, and unsigned arm64 iPhoneOS builds pass |
+| Rendering | Native Metal reaches menus, character/stage selection, matches, pause, and populated results |
+| Game setup | Files picker, exact ROM validation, in-process extraction, cleanup, and local archive mount pass |
+| Touch | Complete iPhone and iPad controls, editor, separate profiles, and full single-contact VS flows pass |
+| Saves/settings | Creation, relaunch, backgrounding, and repeated in-place app updates preserve valid content |
+| Lifecycle | iPhone/iPad foreground recovery plus synthetic interruption and low-memory dispatch pass |
+| Packaging | ROM-free macOS app/DMG and deterministic unsigned IPA pass strict privacy/signing audits |
+
+Hardware-only acceptance still covers audible interruption/routes, true
+simultaneous multitouch, physical-controller gameplay/reconnect, and signed
+iPhone/iPad execution. See [docs/TESTING.md](docs/TESTING.md) for the evidence
+boundary rather than inferred platform claims.
+
+## Reproducible and ROM-free
+
+```mermaid
+flowchart LR
+    A["BrawlerPad scripts"] --> B["Pinned BattleShip sources"]
+    B --> C["Ordered BrawlerPad patches"]
+    C --> D["ROM-free native app or unsigned IPA"]
+    E["Your supported ROM"] --> F["Local validation and Torch extraction"]
+    D --> F
+    F --> G["Application Support archive, saves, and gameplay"]
+```
+
+The compile and package steps never read or embed your ROM. The package audits
+reject ROM extensions, playable archives, saves, credentials, profiles,
+certificates, private keys, personal paths, and unintended generated files.
+A fresh remote clone has replayed every pinned source and maintained patch,
+then built and audited the macOS app/DMG, arm64 Simulator app, generic arm64
+iPhoneOS app, and two byte-identical unsigned IPAs.
+
+## Frequently asked questions
+
+<details>
+<summary><strong>Where is the IPA?</strong></summary>
+
+There is no published binary release yet. `scripts/package-ios.sh` creates an
+unsigned, ROM-free proof IPA locally. It must be re-signed with your own Apple
+identity before installation on a standard device.
+</details>
+
+<details>
+<summary><strong>Does this repository include the game or a ROM?</strong></summary>
+
+No. You must provide your own legally obtained supported ROM. Do not open issues
+requesting game data, generated archives, or download links.
+</details>
+
+<details>
+<summary><strong>Does audio work?</strong></summary>
+
+The native pipeline initializes at 32 kHz and produces non-zero synthesized
+audio. Simulator interruption dispatch and host-output switching recover, but
+audible physical-device output and real headphone/Bluetooth interruption tests
+remain explicitly open.
+</details>
+
+<details>
+<summary><strong>Does it support controllers?</strong></summary>
+
+Yes at the architecture and detection level: SDL mappings and the normalized
+ControlDeck path are included, and Simulator controller detection/automatic
+touch hiding work. Actual physical-controller gameplay and reconnect remain a
+hardware acceptance item.
+</details>
+
+<details>
+<summary><strong>Is this an App Store or TestFlight release?</strong></summary>
+
+No. App Store, TestFlight, AltStore PAL, and other distribution paths require
+separate signing, review, account, and release work.
+</details>
+
+## Project map
+
+| Path | Purpose |
+|---|---|
+| [`scripts/clone-sources.sh`](scripts/clone-sources.sh) | Fetch exact upstream pins and replay maintained patches |
+| [`scripts/build-macos-app.sh`](scripts/build-macos-app.sh) | Build and audit the Apple Silicon app and DMG |
+| [`scripts/build-ios-simulator.sh`](scripts/build-ios-simulator.sh) | Build the universal iPhone/iPad Simulator app |
+| [`scripts/build-ios-device.sh`](scripts/build-ios-device.sh) | Build and audit the unsigned arm64 iPhoneOS app |
+| [`scripts/package-ios.sh`](scripts/package-ios.sh) | Create and audit the deterministic unsigned IPA |
+| [`scripts/check-repo-safety.sh`](scripts/check-repo-safety.sh) | Reject game data, secrets, signing material, and generated products |
+| [`patches/`](patches/) | Ordered BrawlerPad changes applied to pinned upstream sources |
+| [`docs/PLAN.md`](docs/PLAN.md) | Architecture and milestone plan |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Runtime and platform boundaries |
+| [`docs/BUILDING.md`](docs/BUILDING.md) | Full build, install, and signing instructions |
+| [`docs/TESTING.md`](docs/TESTING.md) | Evidence matrix and explicit acceptance boundaries |
+| [`docs/STATUS.md`](docs/STATUS.md) | Current verified state and remaining work |
+| [`docs/WORKLOG.md`](docs/WORKLOG.md) | Chronological implementation and test record |
+| [`docs/LEGAL.md`](docs/LEGAL.md) | Rights and redistribution boundary |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Exact upstream revisions, purposes, and licenses |
+
+Generated source trees, build directories, artifacts, ROMs, and ROM-derived
+archives are ignored and must never be committed.
+
+## Contributing and support
+
+Use [GitHub Issues](https://github.com/chrissotraidis/brawlerpad/issues) for
+reproducible platform or gameplay defects. Include the platform, device/OS,
+commit, build command, observable behavior, and relevant non-sensitive logs.
+Never attach or request ROMs, generated playable archives, saves, credentials,
+or signing material.
+
+## Legal and acknowledgements
 
 BrawlerPad builds on work by JRickey and BattleShip contributors,
 VetriTheRetri and the SSB64 decompilation contributors, the libultraship and
 Harbour Masters communities, Torch contributors, SDL contributors, and the
 HarkinianPad project. Each dependency retains its own license and rights
-boundary.
+boundary. BrawlerPad is not affiliated with or endorsed by Nintendo; all game
+names, copyrights, and trademarks belong to their respective owners.

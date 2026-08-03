@@ -7,7 +7,7 @@ observable runtime result. Compilation alone is not a pass.
 
 | Check | Evidence required | Status |
 |---|---|---|
-| Clean configure and build | command, exit status, artifact architecture | Pass (local Release baseline; clean-checkout rerun pending) |
+| Clean configure and build | command, exit status, artifact architecture | Pass (fresh remote clone, arm64 Release app/DMG, full audits) |
 | User data extraction | Torch exit/log and generated archive outside Git | Pass (local baseline) |
 | Metal rendering | renderer log plus visible frame | Pass through match and populated results with BrawlerPad patch |
 | Audio | audible output and stable stream log | Non-zero synthesis pass; audible pending |
@@ -45,6 +45,13 @@ The rebuilt DMG SHA-256 is
 Raw local ad-hoc signature blobs and DMG filesystem metadata differ between
 builds even when their CodeDirectory and contained payload agree, so those two
 raw hashes are evidence for this artifact rather than reproducibility anchors.
+
+The final remote-clone replay at `d8ef0f8` fetched every exact pin and replayed
+all maintained patches before running `scripts/build-macos-app.sh`. Its arm64
+bundle passed deep ad-hoc signature verification; the generated DMG passed its
+checksum, read-only mount, and contained-app audit. The executable retained
+UUID `EBBCC693-5DFF-32FE-9202-D4E011F64692`; the stable `f3d.o2r` SHA-256 is
+`19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 
 ### Deterministic match proof
 
@@ -426,6 +433,30 @@ SHA-256 remains
 This proves native device compilation and unsigned release packaging, not
 physical-device installation or runtime behavior. Re-sign/install/launch and
 hardware execution remain pending.
+
+### Final clean-checkout mobile replay
+
+The final remote clone initially exposed a fresh-cache Simulator link failure:
+CMake found `libz` and `libbz2` in the iPhoneOS SDK before libultraship's
+downstream toolchain populated its Simulator sysroot. The mobile build scripts
+now resolve the intended SDK with `xcrun` and pass its absolute sysroot and
+arm64 architecture to CMake before dependency discovery.
+
+A second empty Simulator cache then found `libz`, `libbz2`, and `liblzma` only
+under `iPhoneSimulator26.5.sdk`, built successfully, and validated an arm64
+IOSSIMULATOR executable with minimum iOS 17.0. Its executable SHA-256 is
+`c7d645285f1417036365adc9b2ad9b2d9768f3d6d28d1bd84876677b503d0830`.
+The clean generic-device cache independently found the corresponding iPhoneOS
+SDK libraries, built platform IOS/arm64 with minimum iOS 17.0, and passed the
+recursive unsigned-app audit. Its executable SHA-256 is
+`c01aa9f9af0e07ae19114af1efdecdd256ebf227352667eb328c1bba7564f7ea`.
+
+Packaging that exact audited app twice produced byte-identical IPAs with
+SHA-256 `e81a061c7034ae97d5e431f195b141246bd02d7733ffbe7ad1de0dbcdda2400c`.
+Both mobile bundles retained the stable renderer archive SHA-256
+`19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+No simulator was booted for these builds; the already running iPad Pro 13-inch
+(M5) remained the only booted simulator on the machine.
 
 ## Definition-of-done flow
 
