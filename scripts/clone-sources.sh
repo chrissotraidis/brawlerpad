@@ -37,6 +37,11 @@ apply_patch_once() {
     stamp="$(git -C "$checkout" rev-parse --absolute-git-dir)/brawlerpad-patch-$patch_digest"
 
     if [ -f "$stamp" ]; then
+        if git -C "$checkout" apply --check "$patch_file" >/dev/null 2>&1; then
+            echo "Stale patch stamp; applying: $patch_file"
+            git -C "$checkout" apply "$patch_file"
+            return
+        fi
         echo "Patch already applied: $patch_file"
         return
     fi
