@@ -25,7 +25,7 @@ provide their own legally obtained game data.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Unsigned iPhone/iPad IPA | **Buildable now** | Run `scripts/build-ios-device.sh` and `scripts/package-ios.sh`, then re-sign the audited IPA with your own identity. |
+| Unsigned iPhone/iPad proof IPA | **Buildable now** | Run `scripts/build-ios-device.sh` and `scripts/package-ios.sh` for the deterministic, ROM-free audit artifact. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -148,6 +148,11 @@ default while leaving the native menu button available. The current defaults
 reserve the left side for a per-touch floating analog stick and group all
 buttons on the right for simultaneous movement and action input.
 
+On iPhone, Settings uses a compact section picker instead of the tablet
+sidebar, keeps the content at full width, and supports vertical finger-drag
+scrolling anywhere in the active settings pane. iPad retains the persistent
+sidebar and its larger tablet scale.
+
 Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible
 ROM-free proof IPA:
 
@@ -156,10 +161,18 @@ scripts/build-ios-device.sh
 scripts/package-ios.sh
 ```
 
-The IPA is unsigned by design and must be re-signed with the installer's own
-identity before use on a standard physical device. Packaging includes project
-rights notices and discovered source/dependency licenses, then reruns the
-strict package audit.
+This default artifact is an unsigned reproducibility proof: its Mach-O omits a
+UUID and is not a runnable device app even after signing. For a local
+development-signed install, build the runtime variant instead:
+
+```sh
+BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK=OFF scripts/build-ios-device.sh
+```
+
+That variant retains the UUID required by iOS and can then be signed with the
+installer's own identity and provisioning profile. Neither workflow embeds
+project signing material. Packaging includes project rights notices and
+discovered source/dependency licenses, then reruns the strict package audit.
 
 ## First launch
 

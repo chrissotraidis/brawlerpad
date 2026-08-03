@@ -98,4 +98,16 @@ fi
 
 "$BRAWLERPAD_ROOT/scripts/audit-ios-package.sh" "$APP"
 
-echo "BrawlerPad unsigned device app: $APP"
+if [ "$REPRODUCIBLE_DEVICE_LINK" = "ON" ]; then
+    if otool -l "$APP/BrawlerPad" | grep -q 'cmd LC_UUID'; then
+        echo "Reproducible proof executable unexpectedly contains LC_UUID." >&2
+        exit 1
+    fi
+    echo "BrawlerPad unsigned proof app (not device-runnable; LC_UUID omitted): $APP"
+else
+    otool -l "$APP/BrawlerPad" | grep -q 'cmd LC_UUID' || {
+        echo "Runtime device executable is missing required LC_UUID." >&2
+        exit 1
+    }
+    echo "BrawlerPad unsigned runtime app (sign before local installation): $APP"
+fi

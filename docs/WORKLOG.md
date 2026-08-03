@@ -612,3 +612,37 @@
   It passed the strict package audit and deep signature verification, installed
   in place, and launched on the wired iPhone 14. The exact same bundle installed
   in place on the iPad Pro; its locked screen denied only the automated launch.
+
+## 2026-08-03 — responsive iPhone settings and final dual-device replay
+
+- Reinstalled and launched the previously merged build on the now-unlocked
+  iPad without uninstalling or replacing its data container; it ran as PID
+  3200 before the responsive follow-up build.
+- Traced the iPhone Settings failure to two independent causes. Retina display
+  pixels made the prior shortest-side test apply the iPad's 2x ImGui scale to
+  iPhone, and SDL translated touch taps but supplied no drag-to-scroll gesture
+  to ImGui.
+- Classified the iOS form factor with both shortest side and aspect ratio,
+  backed by compile-time iPhone/iPad dimension assertions. iPhone now uses 1x
+  menu scaling, an enlarged scrollbar, a compact section picker instead of the
+  width-heavy sidebar, and a full-width settings pane. iPad keeps its existing
+  2x scale and persistent sidebar.
+- Converted vertical `SDL_FINGERMOTION` into scale-adjusted ImGui wheel input
+  only while a menu is visible, so nested Input Mappings and opacity content
+  can be scrolled with a natural finger drag without affecting gameplay touch.
+- The first signed deployment attempt exposed the deterministic proof build's
+  intentional missing `LC_UUID`; iOS dyld exited before application code. The
+  same source was rebuilt with `BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK=OFF`, and
+  documentation now clearly separates the non-runnable proof artifact from a
+  runtime-linked local device build.
+- The corrected runtime bundle passed the iPhoneOS build, strict package audit,
+  `LC_UUID`, deep-signature, and in-place install checks. Identical executable
+  SHA-256 `1af3166bb1be134465d2e9eed4b22d238503e345ec048dded87a11bb2a0b441b`
+  launched and remained live on iPhone PID 5101 and iPad PID 3213. The iPhone
+  console proved `844x390` selects scale 1, plus zero post-start audio
+  underruns and approximately 16.69 ms steady frame windows. Hands-on phone
+  scrolling remains the final physical acceptance boundary.
+- The final default proof build independently passed its no-UUID guard and
+  recursive audit. Two packages from that exact app were byte-identical at
+  IPA SHA-256
+  `2cf5121dedccb02f3afb65fed9e9e2f8230c68e665daea55d84beeffbce2d2ea`.

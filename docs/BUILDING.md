@@ -202,8 +202,18 @@ scripts/audit-ios-package.sh /absolute/path/to/BrawlerPad.app \
 ```
 
 The unsigned IPA is a build and distribution-boundary proof, not an artifact
-that installs unmodified on a standard device. Re-sign it with your own Apple
-identity and provisioning profile outside the repository.
+that installs on a standard device. Its deterministic executable intentionally
+has no `LC_UUID`, and iOS rejects that Mach-O even if it is subsequently signed.
+
+For a local physical-device build, retain the runtime UUID:
+
+```sh
+BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK=OFF scripts/build-ios-device.sh
+```
+
+Audit that output before adding your own development provisioning profile and
+signature outside the repository. Install it in place to preserve the existing
+app data container; do not uninstall unless a clean-container test is intended.
 
 Never place a ROM, playable `BrawlerPad.o2r`, save, certificate, or profile in
 an app source/resource group. `f3d.o2r` is the sole allowed O2R: the audit

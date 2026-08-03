@@ -75,7 +75,7 @@ audit_app() {
     [ ! -f "$app/embedded.mobileprovision" ] ||
         fail "unsigned app contains embedded.mobileprovision"
     if codesign --verify --strict "$app" >/dev/null 2>&1; then
-        fail "expected an unsigned proof app, but code-signature verification succeeded"
+        fail "expected an unsigned app, but code-signature verification succeeded"
     fi
 
     personal=""

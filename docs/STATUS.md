@@ -89,9 +89,13 @@ and real lifecycle/audio-route changes stay explicitly open.
   archive mount, SDL audio/controller initialization, and visible native Metal
   boot. The equal-size generated ZIP archive is not byte-deterministic across
   runs, so its per-run hash is recorded as evidence rather than a build input.
-- iOS UI scaling now selects a 1x compact-phone or 2x tablet base from SDL's
-  usable display bounds. The iPad first-run window also scales its explicit
-  widths, and visual reinspection proved readable text and unclipped controls.
+- iOS UI scaling now selects a 1x compact-phone or 2x tablet base from both
+  usable display size and form-factor aspect ratio, avoiding Retina-pixel
+  misclassification on iPhone. Phone Settings uses a full-width content pane,
+  compact section picker, enlarged scrollbar, and vertical finger-drag
+  scrolling; iPad retains its persistent sidebar. The iPad first-run window
+  also scales its explicit widths, and visual reinspection proved readable
+  text and unclipped controls.
 - A UIKit multi-touch overlay now supplies analog, A/B/Z/L/R/Start, four
   C-directions, and optional D-pad input through an SDL virtual game controller
   rather than game-specific simulation hooks. It is pinned to ControlDeck port
