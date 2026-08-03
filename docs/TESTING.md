@@ -90,11 +90,11 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
+| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Partial pass (title/menus, VS CSS, Classic CSS/live combat/pause, analog + A/B/Z/Start, non-overlapping V2 layout; full match/results pending) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
-| Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pending | Pending |
+| Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pass (checksum-valid save + config/archive after terminate/relaunch and in-place reinstall) | Pending |
 | Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
 
 ### iPhone first-run proof
@@ -167,8 +167,27 @@ Mode Select highlight to VS Mode, touch A reached VS Start and character
 select, and touch B returned to the parent menu. The editor visibly resized A,
 marked it hidden, restored defaults, and saved with Done. Automatic controller
 hide and its manual override were both observed. Stage select, sustained
-analog gameplay, pause, results, Classic, and simultaneous touches remain open
-and are not claimed by this partial pass.
+analog gameplay, pause, results, Classic, and simultaneous touches were left
+open by this partial pass.
+
+A later pass on the sole iPad repeated the complete Files selection, supported
+ROM validation, linked extraction, and temporary-copy cleanup with the current
+universal Release app. Touch then traversed title, Mode Select, 1P Game, and
+Classic character select. Off-center held contacts exercised the real analog
+stick path, moved the P1 hand to Donkey Kong, and selected him with A; Start
+launched the first Link battle. Analog movement and A/B/Z changed live combat
+state and damage, and Start produced the visible 1P pause screen. The full
+Classic battle/results return and true simultaneous contacts remain open.
+
+Backgrounding flushed configuration before termination. Relaunch skipped
+first-run and restored the archive and touch-visibility override. An in-place
+install migrated the data container from `C133A284-…` to `92A0F187-…`; the
+3,036-byte save retained signature `0x29A`, stored/computed checksum `8752656`,
+and SHA-256
+`0bbc8eb0f63a4aaad44e8d71cf6c4315b13623f0fe3f86b9c2741e70e3730330`.
+The 36,222-byte config retained SHA-256
+`b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`,
+and post-install launch again skipped extraction and restored the overlay.
 
 The first screenshot audit found the D-pad inside the analog footprint and the
 right-side controls collapsed into a dense stack. The rebuilt `tablet-v2`

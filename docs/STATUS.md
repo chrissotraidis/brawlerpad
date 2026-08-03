@@ -105,6 +105,19 @@ remaining lifecycle/audio work stay explicitly open.
   resize, hide, reset, and Done paths were visibly exercised. A forwarded
   `Gamepad` also proved default touch auto-hide; disabling that option for the
   test showed both inputs can remain routed to player 1.
+- A later clean-import iPad pass used the same current universal Release app
+  and reached 1P Game/Classic with touch alone. Analog moved the P1 hand to
+  Donkey Kong, A selected the fighter, Start launched the Link match, and
+  analog/A/B/Z plus Start were visibly exercised in live combat and the 1P
+  pause screen. The temporary picker copy was empty after extraction.
+- After background, terminate, relaunch, and an in-place reinstall, iPad
+  skipped first-run, remounted its extracted archive, and restored the manual
+  touch-visibility setting. The migrated 3,036-byte save remained byte-identical
+  at SHA-256
+  `0bbc8eb0f63a4aaad44e8d71cf6c4315b13623f0fe3f86b9c2741e70e3730330`
+  with signature `0x29A` and an exact stored/computed checksum match; the
+  migrated config retained SHA-256
+  `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`.
 - A screenshot-led comparison against HarkinianPad exposed collisions in the
   first defaults. The version-2 grip layout now keeps D-pad, stick, A/B/Z,
   C-button, and shoulder groups separate in both inspected iPad orientations,
@@ -197,15 +210,15 @@ remaining lifecycle/audio work stay explicitly open.
 
 - Extend lifecycle stress and verify real audio interruptions and route changes
   on physical hardware.
-- Complete the fuller iPad and Classic touch paths plus simultaneous-multitouch
+- Complete an iPad match/results return plus simultaneous-multitouch
   acceptance; repeat the iPhone flow on physical hardware.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 
 ## Not yet claimed
 
-- Physical device testing, complete touch gameplay, or the full lifecycle/audio
-  interruption matrix.
+- Physical device testing, a complete iPad match/results return, or the full
+  lifecycle/audio interruption matrix.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

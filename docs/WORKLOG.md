@@ -364,3 +364,28 @@
   Mach-O UUID is `EBBCC693-5DFF-32FE-9202-D4E011F64692`, Apple CDHash is
   `c970aca0dfd80dfe3418ef23ca77090d568de418`, and DMG SHA-256 is
   `17d95096d3794510267e8029dc2f9f8555d72e6edd1234dc32663d80219d1fe8`.
+
+## 2026-08-02 — iPad Classic and update persistence
+
+- Shut down the iPhone before booting the previously used iPad Pro 13-inch
+  simulator; every check showed the iPad as the machine's only booted device.
+- Reinstalled the current universal Release app and repeated the native Files
+  flow from a clean BrawlerPad runtime: supported ROM validation, linked Torch
+  extraction, empty temporary picker storage, archive mount, Metal rendering,
+  32 kHz audio initialization, and controller registration all passed.
+- Simulator exposed its host `Gamepad`, so automatic touch hiding activated as
+  designed. The app's searchable Input Mappings UI disabled that preference;
+  the touch overlay returned and remained merged into player 1.
+- Touch alone traversed title, Mode Select, 1P Game, and Classic character
+  select. Analog moved the P1 hand to Donkey Kong, A selected him, Start began
+  the Link battle, analog/A/B/Z changed live combat and damage, and Start
+  opened and closed the visible 1P pause screen.
+- Backgrounded, terminated, and relaunched without reinstalling. The app
+  skipped first-run, mounted the preserved archive, restored the tablet
+  overlay preference, and retained a checksum-valid 3,036-byte save.
+- Reinstalled the same app in place. CoreSimulator migrated the data-container
+  UUID, but save SHA-256
+  `0bbc8eb0f63a4aaad44e8d71cf6c4315b13623f0fe3f86b9c2741e70e3730330`
+  and config SHA-256
+  `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`
+  were unchanged; launch again skipped setup and restored Metal plus touch.

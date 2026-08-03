@@ -21,9 +21,11 @@ in-process, and launches the Metal-rendered game on an iPhone simulator. The
 same bundle has completed Files import, linked extraction, and native Metal
 boot on an iPad simulator, with form-factor-aware setup UI. A native,
 customizable multi-touch controller now drives the same SDL/ControlDeck path
-as physical controllers; iPad testing has covered title/menu navigation,
-VS-mode character select, controller auto-hide, and the move/resize/hide/reset
-editor. A HarkinianPad-based grip-layout pass separates the D-pad, stick,
+as physical controllers; iPad testing now covers title/menu navigation,
+VS-mode character select, Classic character selection and live combat,
+pause, controller auto-hide, the move/resize/hide/reset editor, and
+save/settings migration through relaunch and in-place reinstall. A
+HarkinianPad-based grip-layout pass separates the D-pad, stick,
 A/B/Z triangle, C diamond, and shoulder rails without control overlap. A
 follow-up phone V5 pass uses HarkinianPad's physically accepted iPhone
 geometry: L and Z return to the left grip, Start/R stay on the upper-right
@@ -49,9 +51,9 @@ ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
 second checkout reproduces the stripped executable payload, required Mach-O
 UUID, Apple CDHash, shader archive, and every non-signature bundle file.
 
-The remaining iPad/Classic and simultaneous-multitouch matrix, extended
-lifecycle stress, real audio interruption/route testing, and physical-device
-testing remain in progress. See
+The remaining full iPad match/results and simultaneous-multitouch matrix,
+extended lifecycle stress, real audio interruption/route testing, and
+physical-device testing remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
