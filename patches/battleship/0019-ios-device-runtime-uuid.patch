@@ -1,0 +1,23 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ec7c706..6bb4e15 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
+ project(ssb64 LANGUAGES C CXX)
+ 
+ option(BRAWLERPAD_BRANDING "Use BrawlerPad application identity" OFF)
++option(BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK
++    "Omit the Mach-O UUID from unsigned iPhoneOS proof builds" ON)
+ 
+ set(SSB64_MOBILE OFF)
+ if (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+@@ -906,7 +908,8 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+         XCODE_ATTRIBUTE_SUPPORTS_MACCATALYST NO
+         XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
+     )
+-    if(DEFINED PLATFORM AND PLATFORM MATCHES "^OS")
++    if(DEFINED PLATFORM AND PLATFORM MATCHES "^OS" AND
++       BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK)
+         target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-no_uuid")
+     endif()
+ else()

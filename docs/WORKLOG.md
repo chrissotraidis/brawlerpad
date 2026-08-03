@@ -537,3 +537,78 @@
   expectations, and explicit legal/hardware boundaries.
 - Kept the iPad Pro 13-inch (M5) as the sole booted simulator for the full pass;
   no build or packaging step booted another simulator.
+
+## 2026-08-03 — physical iPad audio, settings, and Smash control pass
+
+- Traced the silent-device failure to a persisted `Window.AudioBackend: null`
+  after a transient iOS audio-session activation failure. The iOS runtime now
+  migrates Null back to SDL, retries transient activation, and no longer offers
+  Null as a selectable mobile backend. A physical launch reported SDL device 2,
+  stereo at 32000 Hz, running status 1, and all music/SFX archives loaded.
+- Replaced the fixed-width mobile settings sidebar with content-derived width,
+  preventing `Control Enhancements` and other category labels from clipping on
+  the 12.9-inch iPad.
+- Rechecked the Smash 64 manual and competitive control references. The D-pad
+  is unused in play, all four C buttons jump, analog magnitude matters, and Z
+  must chord with movement/A for shields, rolls, grabs, techs, and Z-cancels.
+  Removed the D-pad, consolidated the C diamond into one large Jump target,
+  moved all actions to the right, and made the left 47 percent a floating-stick
+  zone whose origin is recreated for each initiating touch.
+- Added ordered BattleShip patch 0021 for the control model and profile bump.
+  Its pinned-source replay reproduced the built touch source byte-for-byte.
+- Found that an earlier device-copy destination had stored the verified 16 MiB
+  ROM as a file named `Application Support/BrawlerPad`, blocking the app-data
+  directory. Preserved and read back that file at SHA-1
+  `e2929e10fccc0aa84e5776227e798abc07cedabf`; a remote recursive replacement
+  was rejected in favor of a recoverable in-app migration.
+- Added ordered patch 0022. On iOS it validates the N64 byte-order header,
+  atomically stages the misplaced file, creates the support directory, moves
+  the ROM to `baserom.us.n64`, restores the known-good config, and rolls back if
+  directory creation or the final move fails.
+- The final signed in-place install regenerated a 11.6 MiB `BrawlerPad.o2r`,
+  recipe sidecar, config, logs, and a 3036-byte save. Config read-back retained
+  SHA-256 `f2f1f6a718a8f7877bbce23a12a29a53e0089fb65b3ff1533d5ea2488235a29a`
+  with SDL audio selected. The normal relaunch is live as PID 2966.
+- Interrupting the attached diagnostic console forced shutdown and exposed a
+  QuartzCore/Objective-C teardown SIGSEGV. This was a diagnostic-detach path;
+  BrawlerPad was immediately relaunched normally and remained live. Graceful
+  user-driven quit remains a separate lifecycle acceptance check.
+- Installed the exact same signed executable on a wired iPhone 14 after
+  verifying its SHA-256, signature, entitlements, and embedded device list.
+  The fresh container had no game data, so the same hash-verified local ROM was
+  copied to the documented support path. Relaunch generated the archive,
+  recipe, config, logs, and save; read-back confirmed SDL audio, every music/SFX
+  asset, and the floating touch controller initialized successfully. The normal
+  iPhone launch remained live as PID 5033.
+
+## 2026-08-03 — physical iPhone pacing, audio watermark, and pause Reset
+
+- Captured the running iPhone app log and a 20-second Metal System Trace after
+  audible stutter was reported. The app log contained no runtime errors, but
+  the retained configuration showed full native Retina rendering and the SDL
+  player began consuming an empty queue.
+- Added compact release telemetry for 120-frame windows. The first instrumented
+  run showed rendering settling near 16.7 ms while the software audio queue
+  repeatedly reached zero, separating the audio starvation from the GPU/frame
+  pacing concern.
+- Applied a one-time mobile performance profile that selects the existing 480p
+  window-aspect mode for fresh or still-native preview installs. Later user
+  resolution choices are preserved by a profile version.
+- Changed iOS SDL startup/foreground recovery to prime before unpausing, then
+  made the decomp audio producer use its aligned high sample count whenever the
+  software queue falls below the configured watermark. The final startup prime
+  includes two 1,024-sample device buffers.
+- The final iPhone log primed 4,968 samples against a 4,528-sample target,
+  reported zero post-start underruns, held roughly 1,760–3,900 queued samples,
+  and settled at approximately 16.7 ms per frame. iOS release builds retain
+  these two-second frame/queue summaries in `BrawlerPad.log` for future device
+  diagnosis.
+- Added a red Reset pill to the touch layout. It is visible only while the game
+  reports an actually paused battle and sends the native A+B+Z+R reset chord
+  through the same player-one virtual controller. The layout editor can still
+  move, resize, or hide it.
+- The final signed executable SHA-256 is
+  `c721c192f3d5ef7b8c996e13e140c11fda785e887146d6a2a4cedc677b00415f`.
+  It passed the strict package audit and deep signature verification, installed
+  in place, and launched on the wired iPhone 14. The exact same bundle installed
+  in place on the iPad Pro; its locked screen denied only the automated launch.

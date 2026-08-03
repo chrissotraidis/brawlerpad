@@ -1,0 +1,96 @@
+diff --git a/port/port.cpp b/port/port.cpp
+index 820641a..267614c 100644
+--- a/port/port.cpp
++++ b/port/port.cpp
+@@ -22,6 +22,8 @@
+ #include <functional>
+ #include <typeinfo>
+ #include <unordered_set>
++#include <array>
++#include <fstream>
+ 
+ #include "resource/ResourceType.h"
+ #include "resource/RelocFileFactory.h"
+@@ -1232,6 +1234,70 @@ int PortIsRunning(void) {
+ 
+ } // extern "C"
+ 
++#if defined(__IOS__)
++static bool PortIsN64RomFile(const std::filesystem::path& path) {
++	std::ifstream input(path, std::ios::binary);
++	std::array<unsigned char, 4> magic = {};
++	input.read(reinterpret_cast<char*>(magic.data()), magic.size());
++	return input.gcount() == static_cast<std::streamsize>(magic.size()) &&
++	       (magic == std::array<unsigned char, 4>{ 0x80, 0x37, 0x12, 0x40 } ||
++	        magic == std::array<unsigned char, 4>{ 0x40, 0x12, 0x37, 0x80 } ||
++	        magic == std::array<unsigned char, 4>{ 0x37, 0x80, 0x40, 0x12 });
++}
++
++static void PortRecoverMisplacedIOSRom() {
++	const char* home = std::getenv("HOME");
++	if (home == nullptr || std::strcmp(SSB64_APP_NAME, "BrawlerPad") != 0) {
++		return;
++	}
++
++	namespace fs = std::filesystem;
++	const fs::path support = fs::path(home) / "Library" / "Application Support";
++	const fs::path appData = support / "BrawlerPad";
++	const fs::path stagedRom = support / "BrawlerPad-ROM-Recovery.n64";
++	const fs::path stagedConfig = support / "BrawlerPad-restored.cfg.json";
++	std::error_code ec;
++
++	bool resume = fs::is_regular_file(stagedRom, ec) && PortIsN64RomFile(stagedRom);
++	ec.clear();
++	if (fs::is_regular_file(appData, ec)) {
++		if (!PortIsN64RomFile(appData) || resume) {
++			return;
++		}
++		fs::rename(appData, stagedRom, ec);
++		if (ec) {
++			port_log("BrawlerPad: could not stage misplaced ROM: %s\n", ec.message().c_str());
++			return;
++		}
++		resume = true;
++	}
++	if (!resume || fs::exists(appData, ec)) {
++		return;
++	}
++
++	ec.clear();
++	fs::create_directory(appData, ec);
++	if (!ec) {
++		fs::rename(stagedRom, appData / "baserom.us.n64", ec);
++	}
++	if (ec) {
++		const std::string error = ec.message();
++		std::error_code rollbackError;
++		fs::remove(appData, rollbackError);
++		fs::rename(stagedRom, appData, rollbackError);
++		port_log("BrawlerPad: misplaced ROM recovery failed: %s\n", error.c_str());
++		return;
++	}
++
++	ec.clear();
++	if (fs::is_regular_file(stagedConfig, ec) &&
++	    !fs::exists(appData / "BrawlerPad.cfg.json", ec)) {
++		fs::rename(stagedConfig, appData / "BrawlerPad.cfg.json", ec);
++	}
++	port_log("BrawlerPad: recovered misplaced ROM into Application Support/BrawlerPad\n");
++}
++#endif
++
+ int main(int argc, char* argv[]) {
+ 	/* Use an absolute path for ssb64.log so it lands in a predictable
+ 	 * place regardless of how the binary was launched (Finder / open /
+@@ -1250,6 +1316,10 @@ int main(int argc, char* argv[]) {
+ 		port_log_init(logPath.c_str());
+ 	}
+ 
++#if defined(__IOS__)
++	PortRecoverMisplacedIOSRom();
++#endif
++
+ #if defined(__APPLE__) && !defined(__IOS__)
+ 	/* Disable the macOS press-and-hold accent/diacritic popup for this app.
+ 	 * SDL keeps a Cocoa text-input context alive for the game window, so
+

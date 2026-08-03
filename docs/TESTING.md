@@ -94,14 +94,14 @@ and complete a match, background/foreground, terminate, and relaunch.
 
 | Area | iPhone simulator | iPad simulator | Physical device |
 |---|---|---|---|
-| Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
-| Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
-| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch; missing-resource and invalid-size rejection/cleanup also pass) | Pending |
-| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Pass (touch-only title → VS → CSS → stage → one-minute match → results → CSS; Classic CSS/live combat/pause also covered; true simultaneous contacts pending hardware) | Pending |
+| Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pass (development-signed in-place installs and live processes on iPhone 14 and iPad Pro) |
+| Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Runtime/archive mount pass; direct visual acceptance pending |
+| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch; missing-resource and invalid-size rejection/cleanup also pass) | Pass (exact local ROM, linked extraction, archive/recipe/log/save read-back on both devices) |
+| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Pass (touch-only title → VS → CSS → stage → one-minute match → results → CSS; Classic CSS/live combat/pause also covered; true simultaneous contacts pending hardware) | Floating controller registers on both; pause-only one-touch Reset is built, with hands-on reset/multitouch acceptance pending |
 | Controller connect/reconnect | SDL registration only | Forwarded MFi `Gamepad` detection + auto-hide pass; physical input/reconnect pending | Pending |
-| Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Synthetic begin/end dispatch and host-output switch recovery pass; audible OS interruption/routes pending | Pending |
+| Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Synthetic begin/end dispatch and host-output switch recovery pass; audible OS interruption/routes pending | SDL 32 kHz + all music/SFX assets pass on both; iPhone queue telemetry passes with zero post-start underruns, while long-play listening and real routes remain pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
-| Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pass (checksum-valid save + config/archive after terminate/relaunch and in-place reinstall) | Pending |
+| Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pass (checksum-valid save + config/archive after terminate/relaunch and in-place reinstall) | Archive/config/save generation and iPad in-place update pass; longer persistence acceptance pending |
 | Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Pass (V4 landscape plus dedicated tall/portrait profile inspected live) | Pending |
 
 ### iPhone first-run proof
@@ -457,6 +457,80 @@ Both mobile bundles retained the stable renderer archive SHA-256
 `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 No simulator was booted for these builds; the already running iPad Pro 13-inch
 (M5) remained the only booted simulator on the machine.
+
+### Physical iPad control/audio recovery pass
+
+The final generic-iPhoneOS arm64 build passed the recursive unsigned-app audit,
+then passed deep strict signing verification with the local development profile.
+It installed in place on device `95937B69-2038-56A0-8069-0EB0484BC2F9` and
+launched as `com.brawlerpad.app`.
+
+The first launch exercised the one-time misplaced-ROM recovery and linked Torch
+extraction. Console evidence identified the exact Smash US ROM SHA-1, completed
+extraction in 1871 ms, opened the generated `BrawlerPad.o2r`, initialized SDL
+audio as device 2 / stereo / 32000 Hz / running, loaded every music and SFX
+asset, attached the virtual touch controller, and assigned it to port 1.
+
+Device read-back found `baserom.us.n64`, the 11.6 MiB archive, recipe, restored
+config, logs, and `ssb64_save.bin` under the correct BrawlerPad support
+directory. The config is byte-identical to the post-audio-fix backup and still
+selects `AudioBackend: sdl`. The regenerated 3036-byte save has SHA-256
+`646f4f6f03bc2848b8936227056967d36aec66668b787dea5a481c1a7aef25c3`;
+the malformed earlier ROM copy had already displaced the prior support
+directory, so no older device save was available to restore.
+
+The final executable SHA-256 is
+`a9d5950416db3bd1e2d1af385826325455376a695c485aef12db4fd1b012c91f`;
+the renderer archive remains
+`19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+The final normal launch remains live as PID 2966. Hardware acceptance still
+requires the user to judge floating-stick placement and analog range, then
+exercise stick+Z, stick+A/B, Z+A, and Jump+A/B multitouch combinations.
+
+### Physical iPhone deployment pass
+
+The exact iPad executable was installed in place on a wired iPhone 14
+(`iPhone14,7`, iOS 26.5.2). Its SHA-256 remained
+`a9d5950416db3bd1e2d1af385826325455376a695c485aef12db4fd1b012c91f`,
+the embedded development profile contained the iPhone UDID, and deep strict
+signature verification passed before installation.
+
+The fresh iPhone container initially contained no ROM. Copying the same
+user-owned, hash-verified ROM to the documented support location and relaunching
+created `BrawlerPad.o2r`, its recipe, a 34 KiB config, logs, and a 3 KiB save.
+Read-back proved `AudioBackend: sdl`; the runtime log showed archive mount,
+stereo 32000 Hz SDL initialization, successful loading of all music/SFX assets,
+and assignment of `BrawlerPad Touch Controller` to port 1. The normal process
+remained live as PID 5033. Physical screen, audio, rotation, and multitouch feel
+still require hands-on acceptance.
+
+### Physical iPhone performance and queue proof
+
+The reported stutter was instrumented on the wired iPhone 14 with two-second
+frame and audio-queue summaries written by the Release app. Before the producer
+fix, rendering had already settled near 16.7 ms, but almost every 120-submission
+window reported one to three empty-queue observations. This identified queue
+starvation as the remaining cause of interrupted audio rather than sustained
+Metal overload.
+
+The final build uses the existing 480p window-aspect mode as the one-time mobile
+default, primes SDL with the normal desired buffer plus two 1,024-sample device
+buffers, and chooses the aligned high synthesis count until the queue recovers
+its watermark. Its final 20-second read-back showed:
+
+```text
+iOS audio queue primed: 4968 samples (target 4528)
+iOS audio queue: min=1760 max=3624 underruns=0 priming=false
+iOS frame pacing: avg=16.70 ms max=21.51 ms over20ms=1
+```
+
+All subsequent captured windows reported zero underruns, with queue minima
+roughly 1,760–2,360 samples and maxima roughly 3,600–3,900. The executable
+SHA-256 is
+`c721c192f3d5ef7b8c996e13e140c11fda785e887146d6a2a4cedc677b00415f`.
+It passed the ROM-free package audit and deep signature verification before the
+in-place iPhone install. The same signed bundle installed on the iPad; the iPad
+was locked, so SpringBoard denied that final automated launch request.
 
 ## Definition-of-done flow
 

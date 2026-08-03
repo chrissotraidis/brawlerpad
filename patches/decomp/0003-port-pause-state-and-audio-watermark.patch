@@ -1,0 +1,47 @@
+diff --git a/src/sc/scmanager.c b/src/sc/scmanager.c
+index 4aab3a07e..bd62dfb77 100644
+--- a/src/sc/scmanager.c
++++ b/src/sc/scmanager.c
+@@ -1869,6 +1869,14 @@ void scManagerRunPrintGObjStatus(void)
+ static ub32 sPortResetPending = FALSE;
+ static s32 sPortResetTarget = nSCKindOpeningRoom;
+ 
++/* Keep port-side UI code independent of the decomp header tree while still
++ * using the game's authoritative pause state. */
++sb32 portSCManagerIsBattlePaused(void)
++{
++	return (gSCManagerBattleState != NULL) &&
++	       (gSCManagerBattleState->game_status == nSCBattleGameStatusPause);
++}
++
+ void portSCManagerRequestReset(void)
+ {
+ 	extern void func_800266A0_272A0(void); /* audio wind-down used by every scene exit */
+diff --git a/src/sys/audio.c b/src/sys/audio.c
+index 0db5b475e..cc37da006 100644
+--- a/src/sys/audio.c
++++ b/src/sys/audio.c
+@@ -15,6 +15,8 @@
+ extern void func_80026738_27338(void *arg0);
+ extern void func_800266A0_272A0(void);
+ extern void func_80026204_26E04(void *arg0);
++extern s32 AudioPlayerBuffered(void);
++extern s32 AudioPlayerGetDesiredBuffered(void);
+ #endif
+ 
+ extern SYAudioSettings dSYAudioPublicSettings2, dSYAudioPublicSettings3;
+@@ -299,6 +301,14 @@ static s16 syAudioGetPortSampleCount(void)
+         return high_count;
+     }
+ 
++    /* SDL consumes queued audio in device-sized chunks. Keep producing the
++     * aligned high count until the software queue has recovered its target;
++     * only use the nominal high/low cadence once the safety buffer is full. */
++    if (AudioPlayerBuffered() < AudioPlayerGetDesiredBuffered())
++    {
++        return high_count;
++    }
++
+     error_step = (high_count * 60) - target_rate;
+     error_limit = (high_count - low_count) * 60;
+ 

@@ -3,7 +3,7 @@
 <p align="center">
   <strong>Super Smash Bros. 64 rebuilt as a native Apple-platform port.</strong><br>
   Metal rendering, Files-based ROM setup, physical-controller plumbing, and
-  customizable iPhone/iPad touch controls.
+  floating iPhone/iPad touch controls.
 </p>
 
 <p align="center">
@@ -19,12 +19,6 @@ general-purpose Nintendo 64 emulator and is not affiliated with or endorsed by
 Nintendo. No ROM or original copyrighted game assets are included. Users must
 provide their own legally obtained game data.
 
-![BrawlerPad running on the iPad Simulator with the Tablet V4 touch layout](docs/readme/brawlerpad-ipad-touch-v4.png)
-
-The screenshot is from the current iPad Simulator build using locally supplied
-game data. Neither that game data nor a playable generated archive is part of
-this repository or its packages.
-
 ## Install status
 
 | Option | Status | What to do |
@@ -32,7 +26,7 @@ this repository or its packages.
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
 | Unsigned iPhone/iPad IPA | **Buildable now** | Run `scripts/build-ios-device.sh` and `scripts/package-ios.sh`, then re-sign the audited IPA with your own identity. |
-| Signed physical-device build | **Not yet accepted** | Local signing is possible, but the complete hardware test matrix remains open. |
+| Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
 ## Get started
@@ -59,63 +53,35 @@ are documented in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Status
 
-The research phase is complete and the selected game core is
-[BattleShip](https://github.com/JRickey/BattleShip). Its pinned upstream build
-now compiles and runs natively on Apple Silicon through Metal, validates and
-extracts the local reference ROM, completes a deterministic one-minute match,
-persists a save, relaunches, and packages as a ROM-free `.app` and DMG.
+The selected game core is [BattleShip](https://github.com/JRickey/BattleShip).
+Pinned upstream sources plus the ordered BrawlerPad patches build native Metal
+apps for Apple Silicon macOS, iPhone, and iPad. The port validates a locally
+provided ROM, performs linked Torch extraction, mounts the generated archive,
+persists saves/settings, and supports both physical and native touch-controller
+input through the same SDL/ControlDeck path.
 
-The initial upstream Metal results-screen regression is fixed by a small,
-reproducible BrawlerPad patch. A native arm64 iOS simulator app also now builds,
-installs, opens a ROM through Files, validates it, runs Torch extraction
-in-process, and launches the Metal-rendered game on an iPhone simulator. The
-same bundle has completed Files import, linked extraction, and native Metal
-boot on an iPad simulator, with form-factor-aware setup UI. A native,
-customizable multi-touch controller now drives the same SDL/ControlDeck path
-as physical controllers; iPad testing now covers title/menu navigation,
-VS setup, character and stage select, a complete one-minute match and results
-return, Classic character selection/live combat/pause, controller auto-hide,
-the move/resize/hide/reset editor, and save/settings migration through relaunch
-and in-place reinstall. The current Tablet V4 layout restores HarkinianPad's
-accepted physical-iPad split: D-pad and stick occupy separate left-thumb zones,
-Z sits between them, and Start/R/L, A/B, and the C diamond occupy independent
-right-side groups. A separate tall-window profile and lighter idle treatment
-prevent the compressed, game-obscuring layout seen in earlier captures. A
-follow-up phone V5 pass uses HarkinianPad's physically accepted iPhone
-geometry: L and Z return to the left grip, Start/R stay on the upper-right
-rail, and compact C/A/B groups sit under the right thumb with visible gaps
-between every target. A touch-only iPhone run now covers title,
-Mode Select, character and stage select, a one-minute VS match, pause, results,
-and return to character select. Short button taps and stick flicks are held
-long enough to cross the native game poll boundary, while service coroutines
-publish controller state before game logic consumes it.
-The same run produced a checksum-valid save with one completed VS battle;
-terminate, repeated in-place installs, and relaunch preserved both that save
-and the branded configuration.
-An isolated iPad negative test also proves the no-resource first-run path and
-invalid-ROM handling: a 44-byte `.z64` is rejected with the exact size error,
-no archive is created, the user's source remains untouched, and all temporary
-picker/import copies are removed.
-Three iPad Home/resume cycles preserved the same process, flushed settings,
-resumed Metal and touch presentation, and produced no crash report. The app
-also passed an iPhone Home/resume cycle with a separately accepted,
-non-overlapping phone layout. A native arm64 iPhoneOS build and reproducible
-unsigned proof IPA now pass strict ROM/save/signing/personal-data audits. The
-bundle contains no ROM or generated playable archive; its only `.o2r` is the
-small renderer-shader archive required by Fast3D. A branded arm64
-`BrawlerPad.app` and DMG now also build for macOS, carry the BrawlerPad bundle,
-runtime, archive, and configuration identity, pass deep ad-hoc signature and
-ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
-second checkout reproduces the stripped executable payload, required Mach-O
-UUID, Apple CDHash, shader archive, and every non-signature bundle file.
+The current touch model follows how Smash 64 is actually played. The unused
+D-pad is gone, the left 47 percent of the screen creates a fresh analog stick
+at the initiating touch, and the right side provides Z, A, B, Jump, L, R, and
+Start so movement can be combined with shields, rolls, grabs, attacks, and
+aerials. Short taps and stick flicks are retained across the game poll boundary,
+and the settings sidebar now sizes itself to its labels instead of clipping.
 
-Simulator now also covers synthetic interruption begin/end dispatch, a
-low-memory event, and a live host-output switch with non-crashing recovery.
-The remaining simultaneous-multitouch matrix, audible OS-generated
-interruption/route testing, physical-controller gameplay, and physical-device
-testing remain in progress. See
-[current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
-for exact evidence and remaining work.
+The same development-signed arm64 build is installed on a physical iPad Pro
+and iPhone 14. The iPhone launch log shows a stable ~16.7 ms frame cadence,
+zero post-start audio underruns, and a maintained SDL queue after the mobile
+480p performance profile, startup priming, and queue-watermark recovery were
+enabled. Earlier launches on both devices also confirmed ROM/archive loading,
+32 kHz music/SFX initialization, touch-controller assignment, configuration,
+and save creation. The runtime recovers a persisted Null audio backend and can
+safely migrate a ROM accidentally copied to the old support-path location.
+
+The repository still distributes no signed app, ROM, save, or playable archive.
+Hands-on acceptance remains open for confirming uninterrupted audio during a
+long match, simultaneous multitouch feel, the pause-only Reset action,
+rotation/safe areas, physical-controller gameplay, and real interruption or
+headphone/Bluetooth route changes. See [current status](docs/STATUS.md) and
+[testing evidence](docs/TESTING.md) for the exact boundary.
 
 ## Repository boundary
 
@@ -178,11 +144,9 @@ under Application Support, then deletes that copy. See
 The in-game Settings → Input Mappings page can enable or hide the touch
 overlay, change its opacity, and open the layout editor. Phone and tablet
 layouts persist separately. A physical controller hides gameplay controls by
-default while leaving the native menu button available. Tablet V4 and compact
-phone V5 defaults use separate HarkinianPad-derived thumb zones and explicit
-D-pad/C-button accessibility labels. On iPad, Z sits between the D-pad and
-analog zones while A/B, the C diamond, and the upper shoulder rail remain
-visually independent on the right.
+default while leaving the native menu button available. The current defaults
+reserve the left side for a per-touch floating analog stick and group all
+buttons on the right for simultaneous movement and action input.
 
 Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible
 ROM-free proof IPA:
@@ -215,8 +179,11 @@ altering the source document or leaving temporary copies behind.
 
 ## Touch controls
 
-- **Left:** D-pad, Z, and analog stick in separate iPad thumb zones.
-- **Right:** Start/R/L rail, A/B face buttons, and an independent C diamond.
+- **Left:** touch anywhere in the left 47 percent to create a floating analog
+  stick; it tracks that contact and disappears on release.
+- **Right:** Z, A, B, one large Jump target, and an independent Start/R/L rail.
+- **Pause:** a red Reset pill appears only while a battle is paused and sends
+  the game's native A+B+Z+R reset chord with one touch.
 - **Menu:** the persistent `•••` button remains available when gameplay controls
   are hidden.
 - **Customize:** Settings → Input Mappings changes opacity and opens the editor
@@ -237,15 +204,17 @@ gameplay overlay until the menu closes.
 | Native apps | Apple Silicon macOS, arm64 iOS Simulator, and unsigned arm64 iPhoneOS builds pass |
 | Rendering | Native Metal reaches menus, character/stage selection, matches, pause, and populated results |
 | Game setup | Files picker, exact ROM validation, in-process extraction, cleanup, and local archive mount pass |
-| Touch | Complete iPhone and iPad controls, editor, separate profiles, and full single-contact VS flows pass |
+| Touch | Floating analog plus chord-friendly right-side controls, editor, separate profiles, and full single-contact VS flows pass |
+| Audio | Physical iPhone telemetry holds the queue above its watermark with zero post-start underruns; long-play and route-change listening remain open |
 | Saves/settings | Creation, relaunch, backgrounding, and repeated in-place app updates preserve valid content |
 | Lifecycle | iPhone/iPad foreground recovery plus synthetic interruption and low-memory dispatch pass |
 | Packaging | ROM-free macOS app/DMG and deterministic unsigned IPA pass strict privacy/signing audits |
 
-Hardware-only acceptance still covers audible interruption/routes, true
-simultaneous multitouch, physical-controller gameplay/reconnect, and signed
-iPhone/iPad execution. See [docs/TESTING.md](docs/TESTING.md) for the evidence
-boundary rather than inferred platform claims.
+Hardware-only acceptance still covers long-play audio/interruption/routes,
+true simultaneous-multitouch and pause-reset feel, rotation/safe areas, and
+physical-controller gameplay/reconnect. Signed iPhone/iPad install, data
+generation, audio initialization, and live-process proof pass. See
+[docs/TESTING.md](docs/TESTING.md) for the evidence boundary.
 
 ## Reproducible and ROM-free
 
@@ -286,10 +255,11 @@ requesting game data, generated archives, or download links.
 <details>
 <summary><strong>Does audio work?</strong></summary>
 
-The native pipeline initializes at 32 kHz and produces non-zero synthesized
-audio. Simulator interruption dispatch and host-output switching recover, but
-audible physical-device output and real headphone/Bluetooth interruption tests
-remain explicitly open.
+Yes. The native pipeline initializes at 32 kHz and loads the game music and SFX
+assets on physical iPhone and iPad. On iPhone, the current build primes two
+device buffers before playback, refills toward a software watermark, and logs
+zero post-start underruns while frame pacing holds near 16.7 ms. Long-match
+listening and real headphone/Bluetooth interruption tests remain open.
 </details>
 
 <details>
