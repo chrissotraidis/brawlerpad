@@ -121,6 +121,12 @@ stays explicitly open.
   dedicated top-center slot, retains every labeled control in the accessibility
   tree, and passed a Release rebuild plus visible Metal resume. One Home/resume
   cycle preserved PID `18400`, flushed config state, and produced no crash.
+- A later active-match audit exposed a remaining V3 D-pad intersection. Phone
+  V4 adopts HarkinianPad's Start/R-over-L right rail, increases D-pad/C spacing,
+  anchors the stick and face triangle to safe-area edges, and versions the
+  phone profile so old coordinates cannot mask it. The rebuilt app showed no
+  visible intersections in either landscape side, Start caused a visible game
+  transition, and menu open/close hid and restored the complete overlay.
 - A clean iPhoneOS CMake/Xcode configuration built an unsigned arm64-only
   `BrawlerPad.app` for generic iOS. `vtool` identifies platform IOS, the bundle
   identifier is `com.brawlerpad.app`, and required Files/controller plist keys
@@ -162,8 +168,9 @@ stays explicitly open.
 
 - Extend lifecycle stress and verify real audio interruptions and route changes
   on physical hardware.
-- Complete touch stage-select, active-match, pause, results, Classic, and
-  simultaneous-multitouch acceptance; repeat on iPhone.
+- Complete touch stage-select, sustained analog active-match input, pause,
+  results, Classic, and simultaneous-multitouch acceptance; repeat on iPhone
+  hardware.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 

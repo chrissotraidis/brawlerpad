@@ -23,8 +23,11 @@ boot on an iPad simulator, with form-factor-aware setup UI. A native,
 customizable multi-touch controller now drives the same SDL/ControlDeck path
 as physical controllers; iPad testing has covered title/menu navigation,
 VS-mode character select, controller auto-hide, and the move/resize/hide/reset
-editor. A second HarkinianPad-based grip-layout pass separates the D-pad,
-stick, A/B/Z triangle, C diamond, and shoulder rails without control overlap.
+editor. A HarkinianPad-based grip-layout pass separates the D-pad, stick,
+A/B/Z triangle, C diamond, and shoulder rails without control overlap. A
+follow-up phone V4 pass fixes the remaining D-pad intersection, adopts the
+accepted Start/R-over-L right rail, and visibly holds its spacing through live
+gameplay in both landscape sides.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
 also passed an iPhone Home/resume cycle with a separately accepted,
@@ -105,7 +108,7 @@ The in-game Settings → Input Mappings page can enable or hide the touch
 overlay, change its opacity, and open the layout editor. Phone and tablet
 layouts persist separately. A physical controller hides gameplay controls by
 default while leaving the native menu button available. Tablet version-2 and
-compact-phone version-3 defaults use separate HarkinianPad-inspired thumb
+compact-phone version-4 defaults use separate HarkinianPad-inspired thumb
 zones and explicit D-pad/C-button accessibility labels.
 
 Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible

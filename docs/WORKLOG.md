@@ -179,6 +179,31 @@
 - Captured the exact source delta as ordered BattleShip patch 0006 and verified
   reverse/apply plus byte-for-byte reproduction against the pinned source.
 
+## 2026-08-02 — phone touch-layout V4 active-match pass
+
+- Kept iPhone 17 Pro as the machine's sole booted simulator throughout the
+  pass. Runtime logs explained the initially hidden overlay: Simulator exposed
+  a host-forwarded `Gamepad`, so its configured controller auto-hide path was
+  working. The test container was set to show both inputs without changing the
+  shipping default.
+- Reproduced a visible D-pad intersection during active gameplay despite the
+  earlier V3 acceptance capture. Reworked the compact defaults around
+  HarkinianPad's accepted phone rail: D-pad above the left stick,
+  Start/R-over-L on the upper right, a gapped C diamond beside that rail, and a
+  separate lower-right A/B/Z triangle.
+- Increased D-pad and C axial radii beyond their button diameters, derived the
+  stick and face groups from safe-area edges, and bumped only the phone profile
+  to `phone-v4` so persisted V3 coordinates cannot conceal the fix.
+- Rebuilt and installed the Release simulator app in place. Live match captures
+  in both landscape sides showed no visible intersections and exposed all 15
+  named buttons plus the analog stick. A coordinate Start touch caused a
+  visible title-to-match transition; the native menu hid and restored the
+  complete V4 overlay during play.
+- Recorded the exact source delta as ordered BattleShip patch 0012. Clean
+  forward and reverse checks passed against the post-0011 source. True
+  simultaneous-touch synthesis is unavailable through the simulator automation
+  surface and remains a physical-device acceptance item.
+
 ## 2026-08-02 — native device build and unsigned IPA
 
 - Added dedicated generic-iPhoneOS and packaging scripts. Both Apple-mobile

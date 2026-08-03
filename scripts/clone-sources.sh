@@ -79,7 +79,7 @@ git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
 # tree once. This avoids asking an early patch to reverse-apply through later
 # edits to the same CMake or source context.
 if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
-       "$BRAWLERPAD_ROOT/patches/battleship/0011-reproducible-macos-release.patch" >/dev/null 2>&1 &&
+       "$BRAWLERPAD_ROOT/patches/battleship/0012-ios-phone-touch-layout-v4.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/libultraship" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/libultraship/0003-ios-lifecycle-audio.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/decomp" apply --reverse --check \
@@ -131,7 +131,9 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0010-brawlerpad-identity-and-macos-package.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
-    "$BRAWLERPAD_ROOT/patches/battleship/0011-reproducible-macos-release.patch" 1
+    "$BRAWLERPAD_ROOT/patches/battleship/0011-reproducible-macos-release.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0012-ios-phone-touch-layout-v4.patch" 1
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

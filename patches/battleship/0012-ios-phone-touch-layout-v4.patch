@@ -1,0 +1,84 @@
+diff --git a/port/ios/brawlerpad_touch_controls.mm b/port/ios/brawlerpad_touch_controls.mm
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -328,7 +328,7 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     view.center = center;
+ }
+ - (BOOL)isCompact { return MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) < 600.0; }
+-- (NSString*)profileName { return [self isCompact] ? @"phone-v3" : @"tablet-v2"; }
++- (NSString*)profileName { return [self isCompact] ? @"phone-v4" : @"tablet-v2"; }
+ - (NSString*)storageKey { return [@"BrawlerPad.TouchLayout." stringByAppendingString:self.profile ?: [self profileName]]; }
+ - (void)loadProfile {
+     NSString* next = [self profileName];
+@@ -345,15 +345,16 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
+     BOOL compact = [self isCompact];
+     if (compact) {
+-        // HarkinianPad's phone geometry uses independent upper and lower
+-        // thumb zones instead of shrinking the tablet layout into one stack.
++        // Phone V4 follows HarkinianPad's accepted rail layout: D-pad above
++        // the left stick, shoulders and C controls on the upper-right rail,
++        // and a separate A/B/Z triangle in the lower-right thumb zone.
++        // Axial radii are deliberately larger than button diameters so no
++        // controls intersect even before the safe-area clamp runs.
+         CGFloat left = safe.left + 10.0;
+         CGFloat right = safe.right + 10.0;
+         CGFloat top = safe.top + 36.0;
+         CGFloat shoulderHeight = 44.0;
+         CGFloat shoulderWidth = 76.0;
+-        [self setFrameFor:@"l" center:CGPointMake(left + shoulderWidth * .5, top + shoulderHeight * .5)
+-                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
+         [self setFrameFor:@"r" center:CGPointMake(w - right - shoulderWidth * .5, top + shoulderHeight * .5)
+                      size:CGSizeMake(shoulderWidth, shoulderHeight)];
+         CGFloat startWidth = 78.0;
+@@ -361,26 +362,39 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+                    center:CGPointMake(w - right - shoulderWidth - 8.0 - startWidth * .5,
+                                       top + shoulderHeight * .5)
+                      size:CGSizeMake(startWidth, shoulderHeight)];
++        [self setFrameFor:@"l"
++                   center:CGPointMake(w - right - shoulderWidth * .5,
++                                      top + shoulderHeight * 1.5 + 8.0)
++                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
+ 
+-        CGFloat dSize = 44.0, dRadius = 38.0;
+-        CGPoint dc = CGPointMake(left + 54.0, top + shoulderHeight + 80.0);
++        CGFloat dSize = 44.0, dRadius = 48.0;
++        CGPoint dc = CGPointMake(left + 63.0, top + shoulderHeight + 72.0);
+         [self setFrameFor:@"d-up" center:CGPointMake(dc.x, dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
+         [self setFrameFor:@"d-down" center:CGPointMake(dc.x, dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
+         [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
+         [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
+ 
+         CGFloat stickSize = 116.0;
+-        [self setFrameFor:@"stick" center:CGPointMake(w * .214455, h * .722222)
++        [self setFrameFor:@"stick"
++                   center:CGPointMake(left + 88.0, h - safe.bottom - 88.0)
+                      size:CGSizeMake(stickSize, stickSize)];
+         CGFloat faceSize = 52.0;
+-        [self setFrameFor:@"z" center:CGPointMake(w * .90, h * .69) size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"a" center:CGPointMake(w * .88, h * .86) size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"b" center:CGPointMake(w * .80, h * .79) size:CGSizeMake(faceSize,faceSize)];
+-        CGFloat cSize = 40.0;
+-        [self setFrameFor:@"c-up" center:CGPointMake(w * .866904, h * .398291) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-down" center:CGPointMake(w * .866509, h * .570085) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-left" center:CGPointMake(w * .823855, h * .485470) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-right" center:CGPointMake(w * .911137, h * .486325) size:CGSizeMake(cSize,cSize)];
++        CGFloat faceCenterX = w - right - 58.0;
++        CGFloat faceCenterY = h - safe.bottom - 82.0;
++        [self setFrameFor:@"z" center:CGPointMake(faceCenterX + 12.0, faceCenterY - 44.0)
++                     size:CGSizeMake(faceSize,faceSize)];
++        [self setFrameFor:@"a" center:CGPointMake(faceCenterX + 22.0, faceCenterY + 18.0)
++                     size:CGSizeMake(faceSize,faceSize)];
++        [self setFrameFor:@"b" center:CGPointMake(faceCenterX - 40.0, faceCenterY + 2.0)
++                     size:CGSizeMake(faceSize,faceSize)];
++        CGFloat cSize = 40.0, cRadius = 46.0;
++        CGFloat rightShoulderMinX = w - right - shoulderWidth;
++        CGPoint cc = CGPointMake(rightShoulderMinX - 10.0 - cSize * .5,
++                                 top + shoulderHeight + 76.0);
++        [self setFrameFor:@"c-up" center:CGPointMake(cc.x, cc.y-cRadius) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-down" center:CGPointMake(cc.x, cc.y+cRadius) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-left" center:CGPointMake(cc.x-cRadius, cc.y) size:CGSizeMake(cSize,cSize)];
++        [self setFrameFor:@"c-right" center:CGPointMake(cc.x+cRadius, cc.y) size:CGSizeMake(cSize,cSize)];
+         for (BrawlerPadTouchButton* button in self.buttons)
+             button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
+         [self control:@"start"].accessibilityLabel = @"Start";

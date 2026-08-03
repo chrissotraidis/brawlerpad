@@ -93,12 +93,12 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Partial pass (V3 layout, Start delivery) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
+| Touch menus and gameplay | Partial pass (V4 layout, active-match render, Start delivery, menu hide/restore) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
 | Save/update persistence | Pending | Pending | Pending |
-| Rotation/safe areas/aspect | Partial pass (both landscape sides, V3 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
+| Rotation/safe areas/aspect | Partial pass (both landscape sides, V4 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
 
 ### iPhone first-run proof
 
@@ -183,12 +183,18 @@ profile version intentionally prevents prior `tablet-v1` coordinates from
 silently restoring the rejected defaults; Reset now returns to V2.
 
 The iPhone was booted only after the iPad had shut down. Its first V2 capture
-showed C-down intersecting Z/A and the menu crowding R. Phone V3 spreads A/B/Z
-below the C diamond, moves the gameplay menu to top center, and moves that menu
-to bottom center while Settings is open. The accepted landscape capture shows
-all groups separated and the accessibility tree names all 15 buttons plus the
-analog stick. Touch Start produced a visible game transition. Extended phone
-menu/gameplay coverage and simultaneous-touch stress remain open.
+showed C-down intersecting Z/A and the menu crowding R. Phone V3 separated the
+major zones, but active-match inspection exposed a remaining visible D-pad
+intersection and a less coherent right rail. Phone V4 increases D-pad and C
+axial spacing, derives the stick and face clusters from safe-area edges, and
+adopts HarkinianPad's Start/R-over-L right rail while keeping A/B/Z separate
+below. Fresh captures in both landscape sides show no visible control
+intersections, and the accessibility tree names all 15 buttons plus the analog
+stick. A coordinate touch on Start produced a visible title-to-match
+transition; opening the native menu hid the full overlay and closing it
+restored V4 during live play. The simulator automation surface cannot generate
+true simultaneous contacts, so sustained analog/button combinations and
+simultaneous-touch stress remain open for physical hardware.
 
 ## Apple-mobile lifecycle coverage
 
