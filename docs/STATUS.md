@@ -6,9 +6,9 @@ Updated: 2026-08-02.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: reproducible branded macOS app payload and audited DMG packaging are
-proven, while the remaining touch gameplay, hardware, and lifecycle/audio work
-stays explicitly open.
+partial: the branded macOS package and a complete single-contact iPhone touch
+VS flow are proven, while simultaneous multitouch, physical hardware, and the
+remaining lifecycle/audio work stay explicitly open.
 
 ## Verified
 
@@ -127,6 +127,17 @@ stays explicitly open.
   phone profile so old coordinates cannot mask it. The rebuilt app showed no
   visible intersections in either landscape side, Start caused a visible game
   transition, and menu open/close hid and restored the complete overlay.
+- Very quick UIKit taps and stick flicks could previously fall entirely between
+  adjacent game polls. Touch buttons and final stick values now retain a
+  minimum 50 ms signal pulse, while cancellation paths still neutralize input
+  immediately. Service coroutines are also resumed in stable current-priority
+  order each round, ensuring the controller publishes input before game logic.
+- A clean, diagnostic-free iPhone touch run traversed title, Mode Select,
+  character select, stage select, a one-minute Link-versus-CPU-Pikachu match at
+  Peach's Castle, pause, visible `PIKACHU WINS!` results, and return to
+  character select. Stick, A, B, Z, L, R, C-up, and D-up were exercised during
+  live play; Training pause navigation and EXIT were also verified. The V4
+  controls remained mutually non-overlapping across every inspected scene.
 - A clean iPhoneOS CMake/Xcode configuration built an unsigned arm64-only
   `BrawlerPad.app` for generic iOS. `vtool` identifies platform IOS, the bundle
   identifier is `com.brawlerpad.app`, and required Files/controller plist keys
@@ -150,16 +161,17 @@ stays explicitly open.
   Stable path mapping, deterministic shader archiving, and a reproducible
   device link made its executable, shader archive, and final IPA byte-identical
   to independently produced artifacts from the primary checkout.
-- The current V4 branded device executable SHA-256 is
-  `9bab6f8511f8eb051d301d9ad3f4598f5a3e91d59b1ea50bf0848843876506aa`;
+- The current touch-timing device executable SHA-256 is
+  `26fdfe852741e66176159e2d17b6e0d16c4c6d290a5dcbd685e74ee3cf778bcd`;
   the audited unsigned IPA is
-  `148e0b89322205477667419aeb66e74d9a451cf7620eedb4a14adf944bda7505`,
+  `8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`,
   and `f3d.o2r` retained SHA-256
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 - The device build now refuses an existing non-iOS CMake cache before
   configuration. The pre-V4 clean-checkout binary/IPA replay was byte-identical;
-  ordered patch 0012 was replayed exactly in a fresh source tree, while a
-  second clean-checkout V4 device compile remains unclaimed.
+  ordered patches through 0013 were replayed exactly at the pinned upstream
+  commit, reproducing the two latest production sources byte-for-byte. A second
+  clean-checkout device compile after patch 0013 remains unclaimed.
 - Independent macOS checkout roots produced identical normalized executable
   payload SHA-256
   `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,
@@ -173,9 +185,8 @@ stays explicitly open.
 
 - Extend lifecycle stress and verify real audio interruptions and route changes
   on physical hardware.
-- Complete touch stage-select, sustained analog active-match input, pause,
-  results, Classic, and simultaneous-multitouch acceptance; repeat on iPhone
-  hardware.
+- Complete the fuller iPad and Classic touch paths plus simultaneous-multitouch
+  acceptance; repeat the iPhone flow on physical hardware.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 

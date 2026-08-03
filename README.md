@@ -27,7 +27,11 @@ editor. A HarkinianPad-based grip-layout pass separates the D-pad, stick,
 A/B/Z triangle, C diamond, and shoulder rails without control overlap. A
 follow-up phone V4 pass fixes the remaining D-pad intersection, adopts the
 accepted Start/R-over-L right rail, and visibly holds its spacing through live
-gameplay in both landscape sides.
+gameplay in both landscape sides. A touch-only iPhone run now covers title,
+Mode Select, character and stage select, a one-minute VS match, pause, results,
+and return to character select. Short button taps and stick flicks are held
+long enough to cross the native game poll boundary, while service coroutines
+publish controller state before game logic consumes it.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
 also passed an iPhone Home/resume cycle with a separately accepted,
@@ -41,8 +45,9 @@ ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
 second checkout reproduces the stripped executable payload, required Mach-O
 UUID, Apple CDHash, shader archive, and every non-signature bundle file.
 
-The remaining touch gameplay matrix, extended lifecycle stress, real audio
-interruption/route testing, and physical-device testing remain in progress. See
+The remaining iPad/Classic and simultaneous-multitouch matrix, extended
+lifecycle stress, real audio interruption/route testing, and physical-device
+testing remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 

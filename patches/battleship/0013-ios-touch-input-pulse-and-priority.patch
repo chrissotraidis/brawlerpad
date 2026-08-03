@@ -1,0 +1,197 @@
+diff --git a/port/ios/brawlerpad_touch_controls.mm b/port/ios/brawlerpad_touch_controls.mm
+index 96288ad..984aefd 100644
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -1,6 +1,7 @@
+ #if defined(__IOS__)
+ 
+ #import <UIKit/UIKit.h>
++#import <QuartzCore/QuartzCore.h>
+ 
+ #include "brawlerpad_touch_controls.h"
+ 
+@@ -110,6 +111,8 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ @property(nonatomic) BOOL inputPressed;
+ @property(nonatomic) BOOL layoutEditing;
+ @property(nonatomic) BOOL pill;
++@property(nonatomic) CFTimeInterval inputDownTime;
++@property(nonatomic) NSUInteger inputGeneration;
+ @property(nonatomic, strong) UIColor* idleColor;
+ @property(nonatomic, strong) UIColor* pressedColor;
+ - (instancetype)initWithLabel:(NSString*)label kind:(BPInputKind)kind code:(int)code pill:(BOOL)pill;
+@@ -144,22 +147,50 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     self.layer.cornerRadius = self.pill ? CGRectGetHeight(self.bounds) * 0.48
+                                         : MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) * 0.5;
+ }
+-- (void)setPressed:(BOOL)pressed {
+-    if (self.inputPressed == pressed || self.layoutEditing) return;
+-    self.inputPressed = pressed;
+-    self.backgroundColor = pressed ? self.pressedColor : self.idleColor;
++- (void)applyInputState:(BOOL)pressed {
+     switch (self.inputKind) {
+         case BPInputButton: SetButton(self.inputCode, pressed); break;
+         case BPInputTrigger: SetAxis(self.inputCode, pressed ? 32767 : -32768); break;
+         case BPInputCDirection: SetCDirection(self.inputCode, pressed); break;
+     }
+ }
++- (void)setPressed:(BOOL)pressed {
++    if (self.inputPressed == pressed || self.layoutEditing) return;
++    self.inputPressed = pressed;
++    self.backgroundColor = pressed ? self.pressedColor : self.idleColor;
++    const NSUInteger generation = ++self.inputGeneration;
++    if (pressed) {
++        self.inputDownTime = CACurrentMediaTime();
++        [self applyInputState:YES];
++        return;
++    }
++
++    // UIKit can deliver a synthetic or very quick tap entirely between two
++    // game-thread polls. Keep the normalized virtual-controller signal active
++    // for at least three 60 Hz frames so short taps are never lost. Ordinary
++    // held input still releases immediately once this minimum has elapsed.
++    static const CFTimeInterval minimumPulse = 0.050;
++    const CFTimeInterval remaining = minimumPulse - (CACurrentMediaTime() - self.inputDownTime);
++    if (remaining <= 0.0) {
++        [self applyInputState:NO];
++        return;
++    }
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(remaining * NSEC_PER_SEC)),
++                   dispatch_get_main_queue(), ^{
++        if (self.inputGeneration == generation && !self.inputPressed) {
++            [self applyInputState:NO];
++        }
++    });
++}
+ - (void)inputDown { [self setPressed:YES]; }
+ - (void)inputUp { [self setPressed:NO]; }
+ - (void)cancelInput {
+     BOOL editing = self.layoutEditing;
+     self.layoutEditing = NO;
+-    [self setPressed:NO];
++    ++self.inputGeneration;
++    self.inputPressed = NO;
++    self.backgroundColor = self.idleColor;
++    [self applyInputState:NO];
+     self.layoutEditing = editing;
+ }
+ @end
+@@ -168,8 +199,11 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ @property(nonatomic, strong) UIView* knob;
+ @property(nonatomic) BOOL layoutEditing;
+ @property(nonatomic) BOOL inputTracking;
++@property(nonatomic) CFTimeInterval inputLastUpdateTime;
++@property(nonatomic) NSUInteger inputGeneration;
+ - (BOOL)tracking;
+ - (void)updatePoint:(CGPoint)point;
++- (void)finishInput;
+ - (void)cancelInput;
+ @end
+ 
+@@ -219,15 +253,45 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     CGFloat ny = distance > 0 ? dy / distance * output : 0;
+     SetAxis(SDL_CONTROLLER_AXIS_LEFTX, static_cast<int>(lround(nx * 32767.0)));
+     SetAxis(SDL_CONTROLLER_AXIS_LEFTY, static_cast<int>(lround(ny * 32767.0)));
++    self.inputLastUpdateTime = CACurrentMediaTime();
++}
++- (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
++    ++self.inputGeneration;
++    self.inputTracking=YES;
++    [self updatePoint:[touches.anyObject locationInView:self]];
+ }
+-- (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { self.inputTracking=YES; [self updatePoint:[touches.anyObject locationInView:self]]; }
+ - (void)touchesMoved:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self updatePoint:[touches.anyObject locationInView:self]]; }
+-- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self cancelInput]; }
++- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self finishInput]; }
+ - (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self cancelInput]; }
++- (void)finishInput {
++    const NSUInteger generation = ++self.inputGeneration;
++    self.inputTracking=NO;
++    self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
++
++    // Preserve quick stick flicks across at least three 60 Hz polls, matching
++    // the button pulse guarantee above. This matters for fast menu/CSS moves
++    // and for synthesized accessibility drags that can begin and end between
++    // adjacent game frames.
++    static const CFTimeInterval minimumPulse = 0.050;
++    const CFTimeInterval remaining = minimumPulse - (CACurrentMediaTime() - self.inputLastUpdateTime);
++    if (remaining <= 0.0) {
++        SetAxis(SDL_CONTROLLER_AXIS_LEFTX, 0);
++        SetAxis(SDL_CONTROLLER_AXIS_LEFTY, 0);
++        return;
++    }
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(remaining * NSEC_PER_SEC)),
++                   dispatch_get_main_queue(), ^{
++        if (self.inputGeneration == generation && !self.inputTracking) {
++            SetAxis(SDL_CONTROLLER_AXIS_LEFTX, 0);
++            SetAxis(SDL_CONTROLLER_AXIS_LEFTY, 0);
++        }
++    });
++}
+ - (void)cancelInput {
++    ++self.inputGeneration;
++    self.inputTracking=NO;
+     SetAxis(SDL_CONTROLLER_AXIS_LEFTX, 0);
+     SetAxis(SDL_CONTROLLER_AXIS_LEFTY, 0);
+-    self.inputTracking=NO;
+     self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+ }
+ @end
+diff --git a/port/stubs/n64_stubs.c b/port/stubs/n64_stubs.c
+index e2cb08a..4eac5af 100644
+--- a/port/stubs/n64_stubs.c
++++ b/port/stubs/n64_stubs.c
+@@ -89,8 +89,17 @@ void port_resume_service_threads(void)
+ 		sResumeDebugCount++;
+ 	}
+ 
+-	/* Resume threads in priority order (higher priority first).
+-	 * Simple bubble: scheduler(120) > controller(115) > audio(110) > game(50)
++	/* Build a stable priority order for each resume round. Service threads are
++	 * registered by creation time, which puts the game thread (created by the
++	 * idle thread) ahead of the scheduler, controller, and audio threads it
++	 * later creates. Iterating the registry directly therefore lets game logic
++	 * run before the controller coroutine publishes the current input edge.
++	 * A short press can then be cleared on the following host frame before the
++	 * game ever observes it. Rebuild the order on every call so osSetThreadPri
++	 * changes are honored too.
++	 *
++	 * Higher priority first: scheduler(120) > controller(115) > audio(110)
++	 * > game(50).
+ 	 *
+ 	 * Game-thread cap (kept as opt-in safety net, default OFF). The
+ 	 * original freeze-frame work assumed the cap was necessary — without
+@@ -115,11 +124,32 @@ void port_resume_service_threads(void)
+ 		         (int)sGameThreadCapResumes);
+ 	}
+ 	int game_thread_resumes_this_frame = 0;
++	s32 resume_order[PORT_MAX_SERVICE_THREADS];
+ 
+ 	for (s32 round = 0; round < 8; round++) {
++		/* A resumed thread can create and register child service threads.
++		 * Snapshot and sort at the start of each round so new children join
++		 * the following round without invalidating this round's order. */
++		s32 resume_order_count = sServiceThreadCount;
++		for (s32 i = 0; i < resume_order_count; i++) {
++			resume_order[i] = i;
++		}
++		for (s32 i = 1; i < resume_order_count; i++) {
++			s32 registry_index = resume_order[i];
++			s32 insert_at = i;
++
++			while (insert_at > 0
++			       && sServiceThreads[resume_order[insert_at - 1]]->priority
++			              < sServiceThreads[registry_index]->priority) {
++				resume_order[insert_at] = resume_order[insert_at - 1];
++				insert_at--;
++			}
++			resume_order[insert_at] = registry_index;
++		}
++
+ 		s32 progress = 0;
+-		for (s32 i = 0; i < sServiceThreadCount; i++) {
+-			OSThread *t = sServiceThreads[i];
++		for (s32 i = 0; i < resume_order_count; i++) {
++			OSThread *t = sServiceThreads[resume_order[i]];
+ 			if (t == NULL || t->port_coroutine == NULL) continue;
+ 			if (port_coroutine_is_finished((PortCoroutine *)t->port_coroutine)) continue;
+ 			if (t->state != OS_STATE_WAITING) continue;

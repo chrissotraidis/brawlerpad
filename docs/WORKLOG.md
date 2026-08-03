@@ -297,3 +297,37 @@
 - Expanded the macOS audit to reject missing UUIDs and OSO source paths, verify
   DMG checksums, mount DMGs read-only, and audit the contained app. The final
   30,772 KiB app and 12,096 KiB DMG passed.
+
+## 2026-08-02 — touch input timing and full iPhone flow
+
+- Kept iPhone 17 Pro as the machine's sole booted simulator. A deeper
+  touch-only run found two timing defects behind apparently ignored controls:
+  synthetic/fast UIKit input could end between adjacent polls, and service
+  registration order let game logic resume before the higher-priority
+  controller coroutine published the current edge.
+- Added a minimum 50 ms pulse for buttons, triggers, C directions, and the last
+  stick value. Normal holds still release after the minimum, re-presses
+  invalidate delayed releases, and cancellation/lifecycle/editor paths remain
+  immediate. Service resume rounds now take a registry snapshot and stable-sort
+  it by current priority, including newly registered threads on the next round.
+- Removed every temporary trace and rebuilt cleanly. Touch alone traversed
+  title, Mode Select, VS setup, Link and CPU Pikachu character select, Peach's
+  Castle stage select, a one-minute live match, pause, visible `PIKACHU WINS!`
+  results, and return to character select. Stick/A/B/Z/L/R/C-up/D-up worked in
+  gameplay, and Training pause EXIT was separately verified.
+- Reinspected V4 through Mode Select, character and stage select, live combat,
+  pause, and results; no controls intersected one another. Simulator automation
+  cannot synthesize true simultaneous contacts, so multitouch combinations,
+  physical-controller behavior, audible interruption/routes, and real-device
+  execution remain hardware acceptance items.
+- Recorded the exact production delta as ordered BattleShip patch 0013. A fresh
+  pinned tree accepted patches 0001–0013 in order and reproduced both changed
+  files byte-for-byte; reverse checks and two consecutive source-bootstrap runs
+  also passed.
+- Rebuilt and audited the generic-iPhoneOS arm64 app. Its executable SHA-256 is
+  `26fdfe852741e66176159e2d17b6e0d16c4c6d290a5dcbd685e74ee3cf778bcd`;
+  `f3d.o2r` remains
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`;
+  the unsigned IPA is
+  `8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`.
+  A second packaging pass was byte-identical.

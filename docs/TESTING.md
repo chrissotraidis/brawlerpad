@@ -93,7 +93,7 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Partial pass (V4 layout, active-match render, Start delivery, menu hide/restore) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
+| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Partial pass (title, menus, VS CSS, non-overlapping V2 layout) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
@@ -193,8 +193,27 @@ intersections, and the accessibility tree names all 15 buttons plus the analog
 stick. A coordinate touch on Start produced a visible title-to-match
 transition; opening the native menu hid the full overlay and closing it
 restored V4 during live play. The simulator automation surface cannot generate
-true simultaneous contacts, so sustained analog/button combinations and
-simultaneous-touch stress remain open for physical hardware.
+true simultaneous contacts, so simultaneous stick/button and multi-button
+stress remain open for physical hardware.
+
+A subsequent touch-only iPhone pass found that very fast UIKit taps and stick
+flicks could begin and end between adjacent game polls, while registration
+order let the game coroutine run before the higher-priority controller
+coroutine. Buttons, triggers, C directions, and final stick values now remain
+asserted for at least 50 ms; cancellation still neutralizes immediately. Each
+service resume round also uses a stable priority ordering, so controller state
+is published before game logic consumes it.
+
+With those fixes and all temporary diagnostics removed, touch Start reached
+Mode Select, the analog stick selected VS, Time was changed from 3 to 1, Link
+and CPU Pikachu were selected, Peach's Castle launched, and stick/A/B/Z/L/R,
+C-up, and D-up were exercised in the live match. The pause menu opened, the
+one-minute match completed at a visible `PIKACHU WINS!` results screen, and
+Start returned to character select. A separate Training pause-menu run used
+analog navigation to select EXIT and A to return to character select. The V4
+controls remained mutually non-overlapping in Mode Select, character select,
+stage select, gameplay, pause, and results. Classic, the fuller iPad flow, and
+true simultaneous-contact testing remain open.
 
 ## Apple-mobile lifecycle coverage
 
@@ -245,12 +264,13 @@ only the expected `shaders/` hierarchy and Metal/MSL/GLSL/Slang/HLSL source;
 the audit rejects other O2R files, unsafe paths, non-shader entries, corruption,
 or a shader archive over 1 MiB.
 
-The current V4 unsigned `BrawlerPad-0.1.0-preview.1-unsigned.ipa` passed the
+The current touch-timing unsigned `BrawlerPad-0.1.0-preview.1-unsigned.ipa`
+passed the
 same audit with SHA-256
-`148e0b89322205477667419aeb66e74d9a451cf7620eedb4a14adf944bda7505`;
+`8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`;
 the contained arm64 executable has SHA-256
-`9bab6f8511f8eb051d301d9ad3f4598f5a3e91d59b1ea50bf0848843876506aa`.
-Repeating packaging from the audited V4 app produced an identical IPA.
+`26fdfe852741e66176159e2d17b6e0d16c4c6d290a5dcbd685e74ee3cf778bcd`.
+Repeating packaging from the audited app produced an identical IPA.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
 `_CodeSignature`, and an embedded personal path.
@@ -268,9 +288,10 @@ reproducibility: executable
 `e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`
 and IPA
 `70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`
-matched byte-for-byte. The V4 source series was separately replayed in a fresh
-wrapper checkout and was byte-identical to the applied source; a second V4
-device build from that checkout has not been repeated. The stable `f3d.o2r`
+matched byte-for-byte. The source series through patch 0013 was separately
+replayed at the exact BattleShip pin and reproduced both changed production
+files byte-for-byte; a second clean-checkout device compile after patch 0013
+has not been repeated. The stable `f3d.o2r`
 SHA-256 remains
 `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 
