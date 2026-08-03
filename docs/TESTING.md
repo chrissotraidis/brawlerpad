@@ -90,12 +90,12 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
-| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Partial pass (title/menus, VS CSS, Classic CSS/live combat/pause, analog + A/B/Z/Start, non-overlapping V2 layout; full match/results pending) | Pending |
+| Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Pass (touch-only title → VS → CSS → stage → one-minute match → results → CSS; Classic CSS/live combat/pause also covered; true simultaneous contacts pending hardware) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
 | Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pass (checksum-valid save + config/archive after terminate/relaunch and in-place reinstall) | Pending |
-| Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
+| Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Pass (V3 landscape plus dedicated tall/portrait profile inspected live) | Pending |
 
 ### iPhone first-run proof
 
@@ -197,6 +197,25 @@ below it, and L/Start/R occupy separate rails. Portrait-window and full
 landscape Simulator captures showed no touch-control intersections. The
 profile version intentionally prevents prior `tablet-v1` coordinates from
 silently restoring the rejected defaults; Reset now returns to V2.
+
+User reinspection then showed why V2 still felt worse than HarkinianPad even
+without literal intersections: the shoulder and face controls read as a
+compressed overlay and obscured too much of the game. Tablet V3 incorporates
+HarkinianPad's later physical-iPad refinement, stacking Start/R/L as one right
+rail and deriving its position from the separately spaced Z/A/B triangle; the
+C diamond remains below it, while D-pad and stick retain distinct left lanes.
+Idle fill and border alpha are reduced, and a separately persisted
+`tablet-portrait-v1` profile handles transient tall bounds instead of reusing
+landscape geometry. Fresh landscape and portrait captures on the sole iPad
+showed visible gaps among every target and all 15 accessibility labels.
+
+The V3 Release build then completed the missing iPad VS path with touch alone:
+title, Mode Select, a one-minute rule, Kirby and CPU Donkey Kong selection,
+Peach's Castle, live play, `DK WINS!` results, and Start back to character
+select. Analog, A/B/Z/L/R/C-up, D-pad, and Start were exercised. The resulting
+3,036-byte save reports signature `0x29A`, exact stored/computed checksum
+`8892894`, Castle and Kirby/Donkey Kong records, `vs_total_battles: 1`, and
+SHA-256 `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
 
 The iPhone was booted only after the iPad had shut down. Its first V2 capture
 showed C-down intersecting Z/A and the menu crowding R. Phone V3 separated the

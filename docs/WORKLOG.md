@@ -389,3 +389,30 @@
   and config SHA-256
   `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`
   were unchanged; launch again skipped setup and restored Metal plus touch.
+
+## 2026-08-02 — tablet V3 touch refinement and complete iPad VS flow
+
+- Kept the iPad Pro 13-inch (M5) as the machine's only booted simulator for
+  the entire pass. Live reinspection confirmed the feedback: tablet V2 avoided
+  literal intersections but still compressed the shoulder/face hierarchy and
+  obscured more gameplay than HarkinianPad.
+- Compared the maintained HarkinianPad patches, including its later
+  physical-iPad native-HUD refinement, rather than relying on the older
+  promoted normalized preset. Tablet V3 now stacks Start/R/L on one right
+  rail, derives that rail from a separately spaced Z/A/B triangle, keeps the C
+  diamond below, and preserves distinct D-pad/stick lanes on the left.
+- Added a separately persisted tall/portrait tablet profile so transient
+  rotation or Stage Manager bounds cannot squeeze landscape geometry. Reduced
+  idle fill and border alpha to preserve game readability. Fresh landscape
+  and portrait captures showed every named target with visible gaps.
+- Rebuilt the universal Release simulator app, installed it in place, and used
+  the revised controls for title, Mode Select, one-minute VS setup, Kirby and
+  CPU Donkey Kong selection, Peach's Castle, live combat, visible `DK WINS!`
+  results, and return to character select. Analog, A/B/Z/L/R/C-up, D-pad, and
+  Start all produced observable state changes.
+- Inspected the post-match 3,036-byte save: signature `0x29A`, matching
+  stored/computed checksum `8892894`, Castle and Kirby/Donkey Kong records,
+  `vs_total_battles: 1`, and SHA-256
+  `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
+- Captured the production delta as ordered BattleShip patch 0015. Clean
+  reverse/apply checks reproduced the tested touch source byte-for-byte.

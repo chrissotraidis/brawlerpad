@@ -22,11 +22,15 @@ same bundle has completed Files import, linked extraction, and native Metal
 boot on an iPad simulator, with form-factor-aware setup UI. A native,
 customizable multi-touch controller now drives the same SDL/ControlDeck path
 as physical controllers; iPad testing now covers title/menu navigation,
-VS-mode character select, Classic character selection and live combat,
-pause, controller auto-hide, the move/resize/hide/reset editor, and
-save/settings migration through relaunch and in-place reinstall. A
-HarkinianPad-based grip-layout pass separates the D-pad, stick,
-A/B/Z triangle, C diamond, and shoulder rails without control overlap. A
+VS setup, character and stage select, a complete one-minute match and results
+return, Classic character selection/live combat/pause, controller auto-hide,
+the move/resize/hide/reset editor, and save/settings migration through relaunch
+and in-place reinstall. The current tablet V3 pass incorporates
+HarkinianPad's later physical-iPad refinements: D-pad and stick occupy separate
+left-thumb zones, Start/R/L form one right shoulder stack, A/B/Z form a distinct
+triangle, and the C diamond sits below it. A separate tall-window profile and
+lighter idle treatment prevent the compressed, game-obscuring layout seen in
+the rejected tablet V2 capture. A
 follow-up phone V5 pass uses HarkinianPad's physically accepted iPhone
 geometry: L and Z return to the left grip, Start/R stay on the upper-right
 rail, and compact C/A/B groups sit under the right thumb with visible gaps
@@ -51,9 +55,9 @@ ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
 second checkout reproduces the stripped executable payload, required Mach-O
 UUID, Apple CDHash, shader archive, and every non-signature bundle file.
 
-The remaining full iPad match/results and simultaneous-multitouch matrix,
-extended lifecycle stress, real audio interruption/route testing, and
-physical-device testing remain in progress. See
+The remaining simultaneous-multitouch matrix, extended lifecycle stress, real
+audio interruption/route testing, and physical-device testing remain in
+progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
@@ -118,9 +122,9 @@ under Application Support, then deletes that copy. See
 The in-game Settings → Input Mappings page can enable or hide the touch
 overlay, change its opacity, and open the layout editor. Phone and tablet
 layouts persist separately. A physical controller hides gameplay controls by
-default while leaving the native menu button available. Tablet version-2 and
-compact-phone version-4 defaults use separate HarkinianPad-inspired thumb
-zones and explicit D-pad/C-button accessibility labels.
+default while leaving the native menu button available. Tablet V3 and compact
+phone V5 defaults use separate HarkinianPad-derived thumb zones and explicit
+D-pad/C-button accessibility labels.
 
 Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible
 ROM-free proof IPA:

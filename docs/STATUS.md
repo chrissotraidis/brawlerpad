@@ -6,9 +6,9 @@ Updated: 2026-08-02.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: the branded macOS package and a complete single-contact iPhone touch
-VS flow are proven, while simultaneous multitouch, physical hardware, and the
-remaining lifecycle/audio work stay explicitly open.
+partial: the branded macOS package and complete single-contact iPhone and iPad
+touch VS flows are proven, while simultaneous multitouch, physical hardware,
+and the remaining lifecycle/audio work stay explicitly open.
 
 ## Verified
 
@@ -123,6 +123,21 @@ remaining lifecycle/audio work stay explicitly open.
   C-button, and shoulder groups separate in both inspected iPad orientations,
   uses an uncluttered yellow C diamond, and labels D-pad/C directions
   explicitly for accessibility. A Release simulator rebuild passed.
+- User reinspection found tablet V2 still visually compressed and more
+  obstructive than HarkinianPad. Tablet V3 adopts HarkinianPad's later
+  physical-iPad right rail: Start/R/L stack above the separately spaced Z,
+  A/B, and C groups; the D-pad and analog retain distinct left lanes. A
+  dedicated tall-window profile prevents landscape geometry from collapsing
+  during portrait/rotation transitions, and reduced idle fill/border alpha
+  leaves more of the game readable. Fresh landscape and portrait captures on
+  the sole iPad showed all 15 named buttons plus analog with visible gaps.
+- The revised iPad controls traversed title, Mode Select, one-minute VS setup,
+  Kirby/CPU Donkey Kong character selection, Peach's Castle stage selection,
+  live play, visible `DK WINS!` results, and return to character select. Analog,
+  A, B, Z, L, R, C-up, D-pad, and Start were exercised. The post-match save has
+  signature `0x29A`, matching stored/computed checksum `8892894`, Castle and
+  Kirby/Donkey Kong records, `vs_total_battles: 1`, and SHA-256
+  `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
 - iOS lifecycle handling now gates simulation/render work while backgrounded,
   pauses and clears queued SDL audio, flushes window/config state safely, and
   resumes those paths on foreground events. Three visible iPad Home/resume
@@ -192,7 +207,7 @@ remaining lifecycle/audio work stay explicitly open.
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 - The device build now refuses an existing non-iOS CMake cache before
   configuration. The pre-V4 clean-checkout binary/IPA replay was byte-identical;
-  ordered BattleShip patches through 0014 and decomp patches through 0002 were
+  ordered BattleShip patches through 0015 and decomp patches through 0002 were
   replayed exactly at the pinned upstream commits, reproducing the latest
   production sources byte-for-byte. The fresh device build and package audit
   passed; a second packaging pass was byte-identical.
@@ -210,15 +225,14 @@ remaining lifecycle/audio work stay explicitly open.
 
 - Extend lifecycle stress and verify real audio interruptions and route changes
   on physical hardware.
-- Complete an iPad match/results return plus simultaneous-multitouch
-  acceptance; repeat the iPhone flow on physical hardware.
+- Complete simultaneous-multitouch acceptance and repeat the simulator flows
+  on physical iPhone and iPad hardware.
 - Audible-output confirmation and physical-controller testing remain pending;
   no controller is currently attached.
 
 ## Not yet claimed
 
-- Physical device testing, a complete iPad match/results return, or the full
-  lifecycle/audio interruption matrix.
+- Physical device testing or the full lifecycle/audio interruption matrix.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.
