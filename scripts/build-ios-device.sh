@@ -17,6 +17,21 @@ if [ "$(uname -m)" != "arm64" ]; then
     exit 1
 fi
 
+# CMake cannot change an existing build tree's target platform in place. A
+# stale desktop cache can otherwise accept -DCMAKE_SYSTEM_NAME=iOS while its
+# generated CMakeSystem.cmake remains Darwin, re-enabling host-only scripting
+# dependencies and eventually producing a misleading Xcode generation error.
+if [ -d "$BATTLESHIP_BUILD/CMakeFiles" ]; then
+    BRAWLERPAD_SYSTEM_FILE="$(find "$BATTLESHIP_BUILD/CMakeFiles" -maxdepth 2 \
+        -name CMakeSystem.cmake -type f -print -quit)"
+    if [ -n "$BRAWLERPAD_SYSTEM_FILE" ] &&
+       ! grep -q '^set(CMAKE_SYSTEM_NAME "iOS")' "$BRAWLERPAD_SYSTEM_FILE"; then
+        echo "Refusing non-iOS CMake cache: $BATTLESHIP_BUILD" >&2
+        echo "Choose a fresh build directory argument or remove that stale build directory." >&2
+        exit 1
+    fi
+fi
+
 cmake -S "$BATTLESHIP_SOURCE" -B "$BATTLESHIP_BUILD" -G Xcode \
     -DCMAKE_SYSTEM_NAME=iOS \
     -DPLATFORM=OS64 \

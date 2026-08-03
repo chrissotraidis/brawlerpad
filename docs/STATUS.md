@@ -135,8 +135,8 @@ stays explicitly open.
   logs, configs, credentials, personal paths, Simulator products, profiles,
   and signing material. Its sole O2R is a bounded, entry-validated 21 KiB
   Fast3D shader archive.
-- Two packages from the same audited app produced identical bytes. The 3.4 MiB
-  unsigned IPA has SHA-256 `70f57562...f367`, embeds 28 actual license/notice
+- Two packages from the same audited app produced identical bytes. The unsigned
+  IPA embeds 28 actual license/notice
   files plus the rights/dependency manifests, and passed ZIP traversal,
   extraction, executable-identity, and recursive app audits. Injected ROM,
   signature, and personal-path fixtures were all rejected.
@@ -144,17 +144,22 @@ stays explicitly open.
   fixed. Its corrected form rejected the prior binary; iOS compiler prefix
   maps now replace checkout/build roots with stable labels, and the rebuilt
   app passes the corrected recursive scan without exceptions.
-- A fresh repository clone fetched all exact upstream pins, replayed every
-  ordered patch, and produced a clean audited iPhoneOS build without a ROM.
+- Before V4, a fresh repository clone fetched all exact upstream pins, replayed
+  the then-current ordered patches, and produced a clean audited iPhoneOS build
+  without a ROM.
   Stable path mapping, deterministic shader archiving, and a reproducible
   device link made its executable, shader archive, and final IPA byte-identical
   to independently produced artifacts from the primary checkout.
-- The accepted branded device executable SHA-256 is
-  `e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`;
-  the byte-identical IPA is
-  `70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`,
-  and both checkouts produced `f3d.o2r` SHA-256
+- The current V4 branded device executable SHA-256 is
+  `9bab6f8511f8eb051d301d9ad3f4598f5a3e91d59b1ea50bf0848843876506aa`;
+  the audited unsigned IPA is
+  `148e0b89322205477667419aeb66e74d9a451cf7620eedb4a14adf944bda7505`,
+  and `f3d.o2r` retained SHA-256
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+- The device build now refuses an existing non-iOS CMake cache before
+  configuration. The pre-V4 clean-checkout binary/IPA replay was byte-identical;
+  ordered patch 0012 was replayed exactly in a fresh source tree, while a
+  second clean-checkout V4 device compile remains unclaimed.
 - Independent macOS checkout roots produced identical normalized executable
   payload SHA-256
   `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,

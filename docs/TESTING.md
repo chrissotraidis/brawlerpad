@@ -245,11 +245,12 @@ only the expected `shaders/` hierarchy and Metal/MSL/GLSL/Slang/HLSL source;
 the audit rejects other O2R files, unsafe paths, non-shader entries, corruption,
 or a shader archive over 1 MiB.
 
-Two independently created IPAs were byte-identical. The accepted unsigned
-`BrawlerPad-0.1.0-preview.1-unsigned.ipa` is 3.4 MiB with SHA-256
-`70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`;
-the contained executable has SHA-256
-`e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`.
+The current V4 unsigned `BrawlerPad-0.1.0-preview.1-unsigned.ipa` passed the
+same audit with SHA-256
+`148e0b89322205477667419aeb66e74d9a451cf7620eedb4a14adf944bda7505`;
+the contained arm64 executable has SHA-256
+`9bab6f8511f8eb051d301d9ad3f4598f5a3e91d59b1ea50bf0848843876506aa`.
+Repeating packaging from the audited V4 app produced an identical IPA.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
 `_CodeSignature`, and an embedded personal path.
@@ -260,15 +261,18 @@ absolute checkout strings. Global iOS `-ffile-prefix-map` options now rewrite
 source and build prefixes to stable `BattleShip/` and `BrawlerPadBuild/`
 labels; the corrected scanner passes the rebuilt binary without a waiver.
 
-A fresh local Git clone then fetched every official upstream source at the
-recorded pin and replayed the complete ordered BattleShip, libultraship,
-decomp, and Torch patch series. Two consecutive source-bootstrap runs were
-idempotent. The clean iPhoneOS build passed the strict audit without any ROM
-present. Fixed-prefix compilation, a sorted fixed-timestamp shader ZIP, and
-omission of the device linker's random `LC_UUID` made the clean and primary
-executables identical at the hash above; `f3d.o2r` was also identical at SHA-256
+A fresh local Git clone fetched every official upstream source at the recorded
+pin and replayed the complete ordered BattleShip, libultraship, decomp, and
+Torch patch series. The pre-V4 clean build proved checkout-independent device
+reproducibility: executable
+`e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`
+and IPA
+`70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`
+matched byte-for-byte. The V4 source series was separately replayed in a fresh
+wrapper checkout and was byte-identical to the applied source; a second V4
+device build from that checkout has not been repeated. The stable `f3d.o2r`
+SHA-256 remains
 `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
-Packaging each independently produced byte-identical IPAs at the recorded hash.
 
 This proves native device compilation and unsigned release packaging, not
 physical-device installation or runtime behavior. Re-sign/install/launch and

@@ -203,6 +203,15 @@
   forward and reverse checks passed against the post-0011 source. True
   simultaneous-touch synthesis is unavailable through the simulator automation
   surface and remains a physical-device acceptance item.
+- Completed a fresh generic-iPhoneOS Release build after the V4 change and
+  passed the recursive app and IPA audits. The arm64 executable SHA-256 is
+  `9bab6f8511f8eb051d301d9ad3f4598f5a3e91d59b1ea50bf0848843876506aa`;
+  the unsigned IPA SHA-256 is
+  `148e0b89322205477667419aeb66e74d9a451cf7620eedb4a14adf944bda7505`;
+  a second packaging pass was byte-identical, and `f3d.o2r` retained its
+  established hash. The device-build script now rejects a stale non-iOS CMake
+  tree instead of allowing it to fail later with misleading host-only
+  dependency errors.
 
 ## 2026-08-02 — native device build and unsigned IPA
 
