@@ -287,13 +287,10 @@
   stubs and added an idempotent content-derived Mach-O UUID normalizer that
   ignores the prior UUID and linker-signature metadata.
 - A direct launch caught that removing the desktop UUID makes macOS dyld reject
-  the app. The final package retains deterministic UUID
-  `73622AD5-E270-3C62-A690-8F41D70D0B02` and survived the launch smoke test.
-- Two checkout roots produced normalized executable SHA-256
-  `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,
-  Apple CDHash `07b73399fc24b9705766dc0a17d6cc42ec7b477d`, and identical non-signature
-  bundle files. Opaque ad-hoc signature bytes and DMG filesystem metadata were
-  observed and documented as non-stable.
+  the app. The content-derived UUID pipeline survived launch and was reproduced
+  from two checkout roots, along with identical normalized executable content,
+  CodeDirectory data, and non-signature bundle files. Opaque ad-hoc signature
+  bytes and DMG filesystem metadata were documented as non-stable.
 - Expanded the macOS audit to reject missing UUIDs and OSO source paths, verify
   DMG checksums, mount DMGs read-only, and audit the contained app. The final
   30,772 KiB app and 12,096 KiB DMG passed.
@@ -331,3 +328,39 @@
   the unsigned IPA is
   `8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`.
   A second packaging pass was byte-identical.
+
+## 2026-08-02 — HarkinianPad phone V5 and persistence proof
+
+- Kept iPhone 17 Pro as the machine's only booted simulator. Live inspection
+  showed that V4 avoided literal intersections but still crowded the right
+  rail and obscured more gameplay than HarkinianPad's accepted phone layout.
+- Promoted HarkinianPad's physical-iPhone normalized centers into `phone-v5`:
+  L/Z moved back to the left grip, Start/R occupy the upper-right rail, and
+  the compact C diamond and A/B group have visible gaps under the right thumb.
+- Fixed the remaining short-tap race at the controller task boundary. Port
+  builds now read and publish synchronously before each scene update, while
+  native N64 retains its threaded event path. Short Start taps reached Mode
+  Select; D-down, A, and B navigated VS Start and back.
+- Removed all diagnostics, rebuilt the Release simulator app, and recorded the
+  source deltas as ordered BattleShip patch 0014 and decomp patch 0002. Fresh
+  pinned replays reproduced both changed files byte-for-byte; bootstrap and
+  repository-safety checks passed.
+- Inspected persistence content after terminate/relaunch and repeated in-place
+  installs. The 3,036-byte save retained a valid signature/checksum, one VS
+  battle, and the expected fighter/stage records; the branded configuration
+  retained a stable hash. Simulator data-container UUID migration did not
+  alter either payload.
+- Completed a fresh generic-iPhoneOS arm64 build in an explicit clean iOS
+  tree after the stale default cache was safely rejected. The recursive app
+  and IPA audits passed; executable SHA-256 is
+  `8c91deb84b960b29e2e4ea6818128c03b1b139af35f9d87660cdd618a087f7bf`,
+  IPA SHA-256 is
+  `1654e39efef8f9cd27ca11d1fadfaeb447e7069f575f1d9418719f114c2f2b37`,
+  and a second packaging pass was byte-identical.
+- Rebuilt the macOS app and DMG from the V5/input-boundary sources. App,
+  signature, DMG checksum, mount, and contained-app audits all passed. The
+  executable SHA-256 is
+  `1a9b6335313e1a5411385b1daaf33a14f2fefca8d2311cd0e5d0befc93cc7c82`,
+  Mach-O UUID is `EBBCC693-5DFF-32FE-9202-D4E011F64692`, Apple CDHash is
+  `c970aca0dfd80dfe3418ef23ca77090d568de418`, and DMG SHA-256 is
+  `17d95096d3794510267e8029dc2f9f8555d72e6edd1234dc32663d80219d1fe8`.

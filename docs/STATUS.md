@@ -122,11 +122,10 @@ remaining lifecycle/audio work stay explicitly open.
   tree, and passed a Release rebuild plus visible Metal resume. One Home/resume
   cycle preserved PID `18400`, flushed config state, and produced no crash.
 - A later active-match audit exposed a remaining V3 D-pad intersection. Phone
-  V4 adopts HarkinianPad's Start/R-over-L right rail, increases D-pad/C spacing,
-  anchors the stick and face triangle to safe-area edges, and versions the
-  phone profile so old coordinates cannot mask it. The rebuilt app showed no
-  visible intersections in either landscape side, Start caused a visible game
-  transition, and menu open/close hid and restored the complete overlay.
+  V4 separated the targets, and the follow-up V5 pass replaced its crowded
+  right rail with HarkinianPad's physically accepted iPhone geometry. L and Z
+  occupy the left grip; Start/R and compact C/A/B groups occupy distinct right
+  zones. The versioned profile prevents old coordinates from masking the fix.
 - Very quick UIKit taps and stick flicks could previously fall entirely between
   adjacent game polls. Touch buttons and final stick values now retain a
   minimum 50 ms signal pulse, while cancellation paths still neutralize input
@@ -138,6 +137,17 @@ remaining lifecycle/audio work stay explicitly open.
   character select. Stick, A, B, Z, L, R, C-up, and D-up were exercised during
   live play; Training pause navigation and EXIT were also verified. The V4
   controls remained mutually non-overlapping across every inspected scene.
+- The port controller callback now samples and publishes synchronously at the
+  task-update boundary, avoiding a cooperative-coroutine race that could defer
+  a short Start/face edge past the requesting title or menu scene. In the sole
+  booted iPhone, short Start reached Mode Select, D-down selected VS, A entered,
+  and B returned on the V5 layout.
+- Content-level persistence is proven on iPhone Simulator: after a completed
+  match, the 3,036-byte save retained signature `0x29A`, a valid checksum,
+  `vs_total_battles: 1`, and the expected fighter/stage records across process
+  termination, relaunch, and repeated in-place installs. The 36,104-byte
+  branded config retained stable SHA-256
+  `253913ca78ae94c27767a2a183079f44384db6e5fdde187f81d5abf2510ab65d`.
 - A clean iPhoneOS CMake/Xcode configuration built an unsigned arm64-only
   `BrawlerPad.app` for generic iOS. `vtool` identifies platform IOS, the bundle
   identifier is `com.brawlerpad.app`, and required Files/controller plist keys
@@ -161,25 +171,27 @@ remaining lifecycle/audio work stay explicitly open.
   Stable path mapping, deterministic shader archiving, and a reproducible
   device link made its executable, shader archive, and final IPA byte-identical
   to independently produced artifacts from the primary checkout.
-- The current touch-timing device executable SHA-256 is
-  `26fdfe852741e66176159e2d17b6e0d16c4c6d290a5dcbd685e74ee3cf778bcd`;
+- The current V5/input-boundary device executable SHA-256 is
+  `8c91deb84b960b29e2e4ea6818128c03b1b139af35f9d87660cdd618a087f7bf`;
   the audited unsigned IPA is
-  `8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`,
+  `1654e39efef8f9cd27ca11d1fadfaeb447e7069f575f1d9418719f114c2f2b37`,
   and `f3d.o2r` retained SHA-256
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 - The device build now refuses an existing non-iOS CMake cache before
   configuration. The pre-V4 clean-checkout binary/IPA replay was byte-identical;
-  ordered patches through 0013 were replayed exactly at the pinned upstream
-  commit, reproducing the two latest production sources byte-for-byte. A second
-  clean-checkout device compile after patch 0013 remains unclaimed.
-- Independent macOS checkout roots produced identical normalized executable
-  payload SHA-256
-  `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,
-  Mach-O UUID `73622AD5-E270-3C62-A690-8F41D70D0B02`, Apple CDHash
-  `07b73399fc24b9705766dc0a17d6cc42ec7b477d`, shader archive, and every
-  non-signature bundle file. A smoke launch caught and prevented removal of
-  the UUID required by macOS dyld. Raw ad-hoc signature and DMG-container bytes
-  remain intentionally documented as non-stable packaging metadata.
+  ordered BattleShip patches through 0014 and decomp patches through 0002 were
+  replayed exactly at the pinned upstream commits, reproducing the latest
+  production sources byte-for-byte. The fresh device build and package audit
+  passed; a second packaging pass was byte-identical.
+- The V5/input-boundary macOS package rebuilt and passed app, signature, and
+  mounted-DMG audits. Its executable SHA-256 is
+  `1a9b6335313e1a5411385b1daaf33a14f2fefca8d2311cd0e5d0befc93cc7c82`,
+  Mach-O UUID is `EBBCC693-5DFF-32FE-9202-D4E011F64692`, Apple CDHash is
+  `c970aca0dfd80dfe3418ef23ca77090d568de418`, and DMG SHA-256 is
+  `17d95096d3794510267e8029dc2f9f8555d72e6edd1234dc32663d80219d1fe8`.
+  The content-derived normalization pipeline retains its independent-checkout
+  proof; raw ad-hoc signature and DMG-container bytes remain non-stable
+  packaging metadata.
 
 ## In progress
 

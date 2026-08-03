@@ -1,0 +1,25 @@
+diff --git a/src/sys/controller.c b/src/sys/controller.c
+index 428e99d8c..77222537b 100644
+--- a/src/sys/controller.c
++++ b/src/sys/controller.c
+@@ -329,10 +329,20 @@ void syControllerScheduleRead(void)
+
+ void syControllerFuncRead(void)
+ {
++#ifdef PORT
++    /* The native N64 scheduler and controller thread run concurrently. The
++     * port emulates both as cooperative coroutines, so dispatching this read
++     * can publish the edge only after the scene update that requested it has
++     * already yielded. Sample and publish at the task-update boundary instead;
++     * this preserves short Start/face-button taps in menus and title scenes. */
++    syControllerReadDeviceData();
++    syControllerUpdateGlobalData();
++#else
+     ControllerEvent evt;
+
+     evt.type = CONT_EVENT_UPDATE_GLOBAL_DATA;
+     syControllerDispatchEvent(&evt);
++#endif
+ }
+
+ void unref_80004338(s32 arg0, s32 arg1)

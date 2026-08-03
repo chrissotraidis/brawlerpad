@@ -79,11 +79,11 @@ git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
 # tree once. This avoids asking an early patch to reverse-apply through later
 # edits to the same CMake or source context.
 if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
-       "$BRAWLERPAD_ROOT/patches/battleship/0013-ios-touch-input-pulse-and-priority.patch" >/dev/null 2>&1 &&
+       "$BRAWLERPAD_ROOT/patches/battleship/0014-ios-phone-touch-layout-v5.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/libultraship" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/libultraship/0003-ios-lifecycle-audio.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/decomp" apply --reverse --check \
-       "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch" >/dev/null 2>&1 &&
+       "$BRAWLERPAD_ROOT/patches/decomp/0002-port-synchronous-controller-poll.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/torch" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch" >/dev/null 2>&1; then
     for patch_file in "$BRAWLERPAD_ROOT"/patches/battleship/*.patch; do
@@ -102,6 +102,8 @@ fi
 
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/decomp" \
     "$BRAWLERPAD_ROOT/patches/decomp/0001-retire-vs-results-transition-camera.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/decomp" \
+    "$BRAWLERPAD_ROOT/patches/decomp/0002-port-synchronous-controller-poll.patch" 1
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0001-ios-sandbox-metal-audio-runtime.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
@@ -136,6 +138,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0012-ios-phone-touch-layout-v4.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0013-ios-touch-input-pulse-and-priority.patch" 1
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0014-ios-phone-touch-layout-v5.patch" 1
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

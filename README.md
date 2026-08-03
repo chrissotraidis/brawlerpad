@@ -25,13 +25,17 @@ as physical controllers; iPad testing has covered title/menu navigation,
 VS-mode character select, controller auto-hide, and the move/resize/hide/reset
 editor. A HarkinianPad-based grip-layout pass separates the D-pad, stick,
 A/B/Z triangle, C diamond, and shoulder rails without control overlap. A
-follow-up phone V4 pass fixes the remaining D-pad intersection, adopts the
-accepted Start/R-over-L right rail, and visibly holds its spacing through live
-gameplay in both landscape sides. A touch-only iPhone run now covers title,
+follow-up phone V5 pass uses HarkinianPad's physically accepted iPhone
+geometry: L and Z return to the left grip, Start/R stay on the upper-right
+rail, and compact C/A/B groups sit under the right thumb with visible gaps
+between every target. A touch-only iPhone run now covers title,
 Mode Select, character and stage select, a one-minute VS match, pause, results,
 and return to character select. Short button taps and stick flicks are held
 long enough to cross the native game poll boundary, while service coroutines
 publish controller state before game logic consumes it.
+The same run produced a checksum-valid save with one completed VS battle;
+terminate, repeated in-place installs, and relaunch preserved both that save
+and the branded configuration.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
 also passed an iPhone Home/resume cycle with a separately accepted,

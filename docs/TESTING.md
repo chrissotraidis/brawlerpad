@@ -33,18 +33,15 @@ Metal window showed a fully branded BrawlerPad ROM setup wizard without any
 legacy BattleShip copy. The final package also survived a direct launch smoke
 test after a missing-UUID regression was caught and fixed.
 
-Independent checkout roots produced the same Mach-O UUID
-`73622AD5-E270-3C62-A690-8F41D70D0B02`, Apple CDHash
-`07b73399fc24b9705766dc0a17d6cc42ec7b477d`, and normalized unsigned
-executable SHA-256
-`ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`.
-Every other file in the two app bundles matched byte-for-byte. The stable
-`f3d.o2r` SHA-256 is
+The V5/input-boundary package rebuild passed the complete app and mounted-DMG
+audits. Its Mach-O UUID is `EBBCC693-5DFF-32FE-9202-D4E011F64692`, Apple
+CDHash is `c970aca0dfd80dfe3418ef23ca77090d568de418`, and executable SHA-256 is
+`1a9b6335313e1a5411385b1daaf33a14f2fefca8d2311cd0e5d0befc93cc7c82`.
+The content-derived normalization process was separately proven across two
+checkout roots. The stable `f3d.o2r` SHA-256 is
 `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
-The primary proof's raw ad-hoc-signed executable is
-`0d7b1847bc5ac22554cd72699b018d8ae2dd53cfef130724717dae9b6feb6360`
-and its DMG is
-`45f3714b082d28eca7c045592b1f9e91b777a375bf5ad7d95d7bd853ce2dde85`.
+The rebuilt DMG SHA-256 is
+`17d95096d3794510267e8029dc2f9f8555d72e6edd1234dc32663d80219d1fe8`.
 Raw local ad-hoc signature blobs and DMG filesystem metadata differ between
 builds even when their CodeDirectory and contained payload agree, so those two
 raw hashes are evidence for this artifact rather than reproducibility anchors.
@@ -97,8 +94,8 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
-| Save/update persistence | Pending | Pending | Pending |
-| Rotation/safe areas/aspect | Partial pass (both landscape sides, V4 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
+| Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pending | Pending |
+| Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Partial pass (V2 layout inspected in both iPad orientations) | Pending |
 
 ### iPhone first-run proof
 
@@ -196,6 +193,16 @@ restored V4 during live play. The simulator automation surface cannot generate
 true simultaneous contacts, so simultaneous stick/button and multi-button
 stress remain open for physical hardware.
 
+A later V5 pass replaced the merely separated V4 geometry with the exact
+normalized centers promoted by HarkinianPad's physical-iPhone acceptance.
+L now occupies the upper-left rail, Z sits beside the left-thumb D-pad/stick
+zone, Start/R share the upper-right rail, and C/A/B form distinct compact
+right-thumb groups. The phone profile was bumped to `phone-v5`, preventing
+persisted V4 overrides from concealing the new defaults. The sole booted
+iPhone 17 Pro showed all 15 named buttons and the stick with visible gaps;
+short Start taps reached Mode Select, D-down selected VS Mode, A entered VS
+Start, and B returned.
+
 A subsequent touch-only iPhone pass found that very fast UIKit taps and stick
 flicks could begin and end between adjacent game polls, while registration
 order let the game coroutine run before the higher-priority controller
@@ -214,6 +221,28 @@ analog navigation to select EXIT and A to return to character select. The V4
 controls remained mutually non-overlapping in Mode Select, character select,
 stage select, gameplay, pause, and results. Classic, the fuller iPad flow, and
 true simultaneous-contact testing remain open.
+
+The controller task boundary now performs the port's read and global publish
+synchronously. Native N64 runs retain the original controller-thread event
+path; cooperative port builds no longer defer a requested edge until after the
+scene update. This removed the title/menu short-tap race while retaining the
+50 ms UIKit pulse and priority-ordered service scheduling.
+
+## iPhone save and settings persistence
+
+After the completed VS match, the branded simulator save was inspected with
+the repository save editor rather than inferred from file existence. The
+3,036-byte `ssb64_save.bin` had signature `0x29A`, an exact stored/computed
+checksum match, `vs_total_battles: 1`, Castle recorded in the ground mask, and
+Link/Pikachu present in fighter records. The app was terminated and launched
+again without reinstalling, then rebuilt and installed in place several times;
+the migrated data container still reported those fields and checksum as valid.
+At the final check its boot count had advanced to 22 and SHA-256 was
+`af931a2373df54fe458022ffc1fcc24f0587bf98d026b6d94905eb7c481862f7`.
+`BrawlerPad.cfg.json` remained 36,104 bytes with stable SHA-256
+`253913ca78ae94c27767a2a183079f44384db6e5fdde187f81d5abf2510ab65d`.
+Container UUID changes across `simctl install` are expected; persistence is
+asserted from the migrated content, not a fixed container path.
 
 ## Apple-mobile lifecycle coverage
 
@@ -264,12 +293,12 @@ only the expected `shaders/` hierarchy and Metal/MSL/GLSL/Slang/HLSL source;
 the audit rejects other O2R files, unsafe paths, non-shader entries, corruption,
 or a shader archive over 1 MiB.
 
-The current touch-timing unsigned `BrawlerPad-0.1.0-preview.1-unsigned.ipa`
-passed the
+The current V5/input-boundary unsigned
+`BrawlerPad-0.1.0-preview.1-unsigned.ipa` passed the
 same audit with SHA-256
-`8fca73f0a3b7a14330c30a62bd50b2c5bdc50203cf1dccd3917f86755e124ffb`;
+`1654e39efef8f9cd27ca11d1fadfaeb447e7069f575f1d9418719f114c2f2b37`;
 the contained arm64 executable has SHA-256
-`26fdfe852741e66176159e2d17b6e0d16c4c6d290a5dcbd685e74ee3cf778bcd`.
+`8c91deb84b960b29e2e4ea6818128c03b1b139af35f9d87660cdd618a087f7bf`.
 Repeating packaging from the audited app produced an identical IPA.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
