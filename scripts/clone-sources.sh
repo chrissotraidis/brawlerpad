@@ -30,6 +30,7 @@ clone_at_pin() {
 apply_patch_once() {
     local checkout="$1"
     local patch_file="$2"
+    local recover_stale_stamp="${3:-0}"
     local patch_digest
     local stamp
 
@@ -37,7 +38,8 @@ apply_patch_once() {
     stamp="$(git -C "$checkout" rev-parse --absolute-git-dir)/brawlerpad-patch-$patch_digest"
 
     if [ -f "$stamp" ]; then
-        if git -C "$checkout" apply --check "$patch_file" >/dev/null 2>&1; then
+        if [ "$recover_stale_stamp" -eq 1 ] &&
+           git -C "$checkout" apply --check "$patch_file" >/dev/null 2>&1; then
             echo "Stale patch stamp; applying: $patch_file"
             git -C "$checkout" apply "$patch_file"
             return
@@ -129,7 +131,7 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0010-brawlerpad-identity-and-macos-package.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
-    "$BRAWLERPAD_ROOT/patches/battleship/0011-reproducible-macos-release.patch"
+    "$BRAWLERPAD_ROOT/patches/battleship/0011-reproducible-macos-release.patch" 1
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 
