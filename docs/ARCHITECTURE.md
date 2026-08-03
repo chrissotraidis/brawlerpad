@@ -65,3 +65,16 @@ or submitting to an invalid drawable.
 - Temporary: security-scoped import copies and extraction staging.
 
 No absolute developer path is persisted into configuration or packages.
+
+## Release normalization
+
+The branded macOS package strips object/source symbols, uses deterministic
+Objective-C stubs, then derives `LC_UUID` from the final rewritten Mach-O
+payload before code signing. The UUID is retained because macOS dyld requires
+it. Local ad-hoc signing can vary opaque bytes outside Apple's CodeDirectory,
+so reproducibility is established by the normalized unsigned payload, UUID,
+CDHash, and per-file bundle manifest rather than raw signature-container bytes.
+
+The unsigned iPhoneOS proof instead omits `LC_UUID`; iOS Simulator retains its
+required UUID. Both Apple package paths use the same deterministic renderer
+shader archive and strict ROM/save/credential/path audits.

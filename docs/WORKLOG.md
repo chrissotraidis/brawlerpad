@@ -243,3 +243,23 @@
 - Replayed every ordered BattleShip, libultraship, decomp, and Torch patch in a
   fresh wrapper clone, verified a second idempotent bootstrap, rebuilt without
   a ROM, and reproduced the executable, shader archive, and IPA byte-for-byte.
+
+## 2026-08-02 — reproducible macOS release payload
+
+- Corrected the package's credits pre-generation so `info.credits` uses the
+  same multiline conversion as CMake, then stripped release-only source and
+  object symbols before signing.
+- Replaced nondeterministic Objective-C fast stubs with deterministic small
+  stubs and added an idempotent content-derived Mach-O UUID normalizer that
+  ignores the prior UUID and linker-signature metadata.
+- A direct launch caught that removing the desktop UUID makes macOS dyld reject
+  the app. The final package retains deterministic UUID
+  `73622AD5-E270-3C62-A690-8F41D70D0B02` and survived the launch smoke test.
+- Two checkout roots produced normalized executable SHA-256
+  `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,
+  Apple CDHash `07b73399fc24b9705766dc0a17d6cc42ec7b477d`, and identical non-signature
+  bundle files. Opaque ad-hoc signature bytes and DMG filesystem metadata were
+  observed and documented as non-stable.
+- Expanded the macOS audit to reject missing UUIDs and OSO source paths, verify
+  DMG checksums, mount DMGs read-only, and audit the contained app. The final
+  30,772 KiB app and 12,096 KiB DMG passed.

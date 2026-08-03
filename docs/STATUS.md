@@ -6,8 +6,9 @@ Updated: 2026-08-02.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: branded macOS app/DMG packaging is proven, while the remaining touch
-gameplay, hardware, and lifecycle/audio work stays explicitly open.
+partial: reproducible branded macOS app payload and audited DMG packaging are
+proven, while the remaining touch gameplay, hardware, and lifecycle/audio work
+stays explicitly open.
 
 ## Verified
 
@@ -38,12 +39,13 @@ gameplay, hardware, and lifecycle/audio work stays explicitly open.
 - The packaged app was inspected visibly through the macOS accessibility
   surface: first-run setup, Nintendo 64/opening scenes, How to Play, character
   select, and live Dream Land combat rendered correctly in its Metal window.
-- The branded packaging workflow produced a 35,372 KiB arm64
-  `BrawlerPad.app` and 12,792 KiB DMG with bundle identifier
+- The branded packaging workflow produced a 30,772 KiB arm64
+  `BrawlerPad.app` and 12,096 KiB DMG with bundle identifier
   `com.brawlerpad.app.macos`, BrawlerPad runtime/storage/archive/config names,
   portable load commands, deep ad-hoc signing, rights/notices, and no ROM,
-  playable archive, save, credentials, or personal paths. A fresh visible
-  launch showed a fully branded Metal first-run wizard.
+  playable archive, save, credentials, or personal paths. The DMG checksum and
+  its read-only-mounted app pass the same audit. A fresh visible launch showed
+  a fully branded Metal first-run wizard.
 - A ROM-free synthetic replay completed a one-minute Mario-versus-level-9-Fox
   match. BattleShip verified all 3,600 frames with rolling checksum
   `0xC47FF9C5`, entered the VS results scene, continued frames, and exited
@@ -147,6 +149,14 @@ gameplay, hardware, and lifecycle/audio work stays explicitly open.
   `70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`,
   and both checkouts produced `f3d.o2r` SHA-256
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+- Independent macOS checkout roots produced identical normalized executable
+  payload SHA-256
+  `ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`,
+  Mach-O UUID `73622AD5-E270-3C62-A690-8F41D70D0B02`, Apple CDHash
+  `07b73399fc24b9705766dc0a17d6cc42ec7b477d`, shader archive, and every
+  non-signature bundle file. A smoke launch caught and prevented removal of
+  the UUID required by macOS dyld. Raw ad-hoc signature and DMG-container bytes
+  remain intentionally documented as non-stable packaging metadata.
 
 ## In progress
 

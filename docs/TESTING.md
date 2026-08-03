@@ -17,21 +17,37 @@ observable runtime result. Compilation alone is not a pass.
 
 ### Branded macOS package proof
 
-The 2026-08-02 branded build produced a 35,372 KiB arm64
-`BrawlerPad.app` and a 12,792 KiB `BrawlerPad.dmg`. The bundle identifier is
+The final 2026-08-02 branded build produced a 30,772 KiB arm64
+`BrawlerPad.app` and a 12,096 KiB `BrawlerPad.dmg`. The bundle identifier is
 `com.brawlerpad.app.macos`; its data directory, generated archive, and config
 identity are BrawlerPad rather than BattleShip. The app passed strict deep
 ad-hoc signature verification, portable-load-command inspection, and the
 recursive ROM/archive/save/config/log/credential/personal-path audit. Its only
 O2R is the bounded Fast3D shader archive, and its package includes the
-rights/dependency manifests and discovered notices.
+rights/dependency manifests and discovered notices. The audit also verified
+the DMG checksum, mounted it read-only, and reran the complete app audit on the
+contained bundle.
 
 A fresh first launch was inspected visibly through macOS accessibility. The
 Metal window showed a fully branded BrawlerPad ROM setup wizard without any
-legacy BattleShip copy. Accepted SHA-256 values are executable
-`31a6677f0eb867c1dfc80e74ed478af62c492242e6fec4749dfe12ce59236f33`,
-`f3d.o2r` `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`,
-and DMG `a20177a5324f62865271ee3fcb5c46220892e2cfeb61428f48b22075f954e273`.
+legacy BattleShip copy. The final package also survived a direct launch smoke
+test after a missing-UUID regression was caught and fixed.
+
+Independent checkout roots produced the same Mach-O UUID
+`73622AD5-E270-3C62-A690-8F41D70D0B02`, Apple CDHash
+`07b73399fc24b9705766dc0a17d6cc42ec7b477d`, and normalized unsigned
+executable SHA-256
+`ef947ea24de6c168f145f83f9bdad69e5732e4bf0be5f7482eae408f5bc3e831`.
+Every other file in the two app bundles matched byte-for-byte. The stable
+`f3d.o2r` SHA-256 is
+`19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
+The primary proof's raw ad-hoc-signed executable is
+`0d7b1847bc5ac22554cd72699b018d8ae2dd53cfef130724717dae9b6feb6360`
+and its DMG is
+`45f3714b082d28eca7c045592b1f9e91b777a375bf5ad7d95d7bd853ce2dde85`.
+Raw local ad-hoc signature blobs and DMG filesystem metadata differ between
+builds even when their CodeDirectory and contained payload agree, so those two
+raw hashes are evidence for this artifact rather than reproducibility anchors.
 
 ### Deterministic match proof
 
@@ -202,12 +218,14 @@ For macOS `.app`, iPhoneOS `.app`, and IPA:
 
 - verify platform and arm64 architecture;
 - verify required executable, plist, ROM-free resources, and notices;
+- require the dyld-mandated macOS `LC_UUID` and reject OSO source-path symbols;
 - reject ROM extensions and generated playable archives;
 - reject saves, configs containing personal paths, credentials, profiles,
   certificates, private keys, and debug secrets;
 - reject Simulator binaries from device packages;
 - inspect archive entry names and embedded strings for developer paths;
 - verify unsigned artifacts contain no stale signature material;
+- verify and mount macOS DMGs read-only, then audit the contained app;
 - record SHA-256 checksums.
 
 The 2026-08-02 native device proof built successfully for generic iPhoneOS with

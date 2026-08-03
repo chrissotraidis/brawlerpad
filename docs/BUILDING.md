@@ -87,6 +87,19 @@ This builds, packages, and audits ignored release artifacts at
 `~/Library/Application Support/BrawlerPad`, and names its generated archive
 and configuration `BrawlerPad.o2r` and `BrawlerPad.cfg.json`. It is ad-hoc
 signed and contains the rights/dependency manifests and discovered notices.
+The branded release link uses deterministic Objective-C stubs, strips source
+symbols, and replaces the post-rewrite Mach-O UUID with a content-derived UUID
+before signing. macOS dyld requires that UUID, so unlike the unsigned device
+proof it must not be removed. The audit rejects a missing UUID or residual OSO
+source paths, verifies the DMG checksum, mounts it read-only, and audits its
+contained app.
+
+Across independent checkout roots, the normalized unsigned executable payload
+must be byte-identical and the ad-hoc signed executables must have the same
+UUID and Apple CDHash. Opaque bytes outside the CodeDirectory in local ad-hoc
+signatures and filesystem metadata in `hdiutil` DMGs are not stable; raw signed
+executable and DMG SHA-256 values are therefore recorded as artifact evidence,
+not cross-checkout reproducibility anchors.
 
 Run the audit independently with:
 

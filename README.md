@@ -34,7 +34,9 @@ bundle contains no ROM or generated playable archive; its only `.o2r` is the
 small renderer-shader archive required by Fast3D. A branded arm64
 `BrawlerPad.app` and DMG now also build for macOS, carry the BrawlerPad bundle,
 runtime, archive, and configuration identity, pass deep ad-hoc signature and
-ROM/privacy audits, and show a fully branded ROM-free first-run wizard.
+ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
+second checkout reproduces the stripped executable payload, required Mach-O
+UUID, Apple CDHash, shader archive, and every non-signature bundle file.
 
 The remaining touch gameplay matrix, extended lifecycle stress, real audio
 interruption/route testing, and physical-device testing remain in progress. See
@@ -82,7 +84,8 @@ scripts/build-macos-app.sh
 This produces ignored `BrawlerPad.app` and `BrawlerPad.dmg` artifacts under
 `ref/BattleShip/dist/`. The app is ad-hoc signed, uses bundle identifier
 `com.brawlerpad.app.macos`, and prompts for a supported ROM on first launch;
-no ROM or playable generated archive is bundled.
+no ROM or playable generated archive is bundled. The build audit verifies the
+app, mounts the DMG read-only, and audits the contained app again.
 
 ## iPhone and iPad builds
 
