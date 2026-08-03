@@ -126,9 +126,11 @@ under Application Support, then deletes that copy. See
 The in-game Settings → Input Mappings page can enable or hide the touch
 overlay, change its opacity, and open the layout editor. Phone and tablet
 layouts persist separately. A physical controller hides gameplay controls by
-default while leaving the native menu button available. Tablet V3 and compact
+default while leaving the native menu button available. Tablet V4 and compact
 phone V5 defaults use separate HarkinianPad-derived thumb zones and explicit
-D-pad/C-button accessibility labels.
+D-pad/C-button accessibility labels. On iPad, Z sits between the D-pad and
+analog zones while A/B, the C diamond, and the upper shoulder rail remain
+visually independent on the right.
 
 Build and audit an unsigned arm64 iPhoneOS app, then create the reproducible
 ROM-free proof IPA:

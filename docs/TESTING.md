@@ -235,6 +235,28 @@ select. Analog, A/B/Z/L/R/C-up, D-pad, and Start were exercised. The resulting
 `8892894`, Castle and Kirby/Donkey Kong records, `vs_total_battles: 1`, and
 SHA-256 `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
 
+A subsequent user reinspection showed Tablet V3 still grouping Z, A/B, the C
+diamond, and the shoulder rail into a visually crowded right-side mass. Tablet
+V4 restores HarkinianPad's accepted physical-iPad split: Z is between the
+left-side D-pad and analog stick, A/B retain a separate right thumb zone, the C
+diamond is isolated below, and the Start/R/L rail is anchored independently
+above. A fresh landscape capture on the sole booted iPad showed all 15 named
+buttons plus the analog stick with mutually separated groups. A coordinate
+Start tap changed the rendered game state, and opening/closing the native menu
+removed and restored the full gameplay overlay.
+
+The V4 app was installed in place rather than clearing its container. The save
+remained byte-identical at SHA-256
+`35372f0f42334b27f192faf097a85205a5468ea1d7431ff9e7a330895a662c6b`,
+with signature `0x29A`, matching stored/computed checksum `8895910`, Castle,
+and `vs_total_battles: 1`; configuration remained byte-identical at SHA-256
+`b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`.
+A fresh generic-iPhoneOS arm64 app passed the recursive package audit, and two
+packaging passes produced byte-identical unsigned IPAs at SHA-256
+`ac1820954dc1aa2088aaa80d0bfe9f80d4ae784e666dd7dbdaac652bf538604c`.
+True simultaneous contacts and physical-device feel remain hardware acceptance
+items.
+
 The iPhone was booted only after the iPad had shut down. Its first V2 capture
 showed C-down intersecting Z/A and the menu crowding R. Phone V3 separated the
 major zones, but active-match inspection exposed a remaining visible D-pad

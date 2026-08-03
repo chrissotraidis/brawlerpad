@@ -444,3 +444,36 @@
   normal BrawlerPad bundle, and launched directly into rendered gameplay. The
   migrated production save retained SHA-256
   `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
+
+## 2026-08-03 — iPad touch-layout V4
+
+- Kept the iPad Pro 13-inch (M5) as the machine's only booted simulator. The
+  user's live reinspection exposed Tablet V3's remaining problem: Z, A/B, C,
+  and the shoulder rail still read as one crowded right-side control mass.
+- Restored HarkinianPad's accepted physical-iPad split in `tablet-v4`: Z now
+  occupies the space between the left D-pad and stick, A/B and the C diamond
+  have independent right-side zones, and the upper Start/R/L rail no longer
+  derives its position from the face stack. Phone V5 and portrait-tablet
+  defaults are unchanged.
+- Rebuilt and installed the universal Release app in place. A fresh capture
+  showed the groups mutually separated and every named target available. A
+  coordinate Start tap changed the rendered state; opening the native menu
+  removed the gameplay controls and closing it restored them.
+- The migrated save retained SHA-256
+  `35372f0f42334b27f192faf097a85205a5468ea1d7431ff9e7a330895a662c6b`,
+  signature `0x29A`, exact checksum `8895910`, Castle, and one VS battle. The
+  configuration retained SHA-256
+  `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`.
+- Recorded the source delta as ordered BattleShip patch 0017. A fresh pinned
+  clone replayed patches 0001–0017 and reproduced the tested touch source
+  byte-for-byte; bootstrap migration now safely applies any newer unapplied
+  patches after recognizing an older unstamped tree.
+- Built a fresh generic-iPhoneOS arm64 app and passed recursive app/IPA audits.
+  Executable SHA-256 is
+  `d21407f6d7b0f3ece8c3ec91955203446967f91cd18b8ab3e92a065aa0cbb8a9`;
+  `f3d.o2r` remains
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`;
+  unsigned IPA SHA-256 is
+  `ac1820954dc1aa2088aaa80d0bfe9f80d4ae784e666dd7dbdaac652bf538604c`.
+  A second packaging pass was byte-identical. True simultaneous touch and
+  physical-device feel remain open hardware checks.

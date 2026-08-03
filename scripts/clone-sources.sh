@@ -74,10 +74,10 @@ git -C "$BRAWLERPAD_REF/BattleShip" submodule update --init --recursive
 git -C "$BRAWLERPAD_REF/BattleShip" submodule foreach --recursive \
     'git config remote.origin.pushurl disabled://brawlerpad-reference-input'
 
-# Older BrawlerPad checkouts predate per-patch stamps. If the terminal patch
-# in every patched repository is already present, migrate that known-complete
-# tree once. This avoids asking an early patch to reverse-apply through later
-# edits to the same CMake or source context.
+# Older BrawlerPad checkouts predate per-patch stamps. If the last patch from
+# that unstamped era is present in every patched repository, migrate the
+# known-complete prefix once. Newer BattleShip patches are marked only when
+# they are already present, then applied normally below when they are not.
 if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/battleship/0016-ios-picker-copy-cleanup.patch" >/dev/null 2>&1 &&
    git -C "$BRAWLERPAD_REF/BattleShip/libultraship" apply --reverse --check \
@@ -87,6 +87,11 @@ if git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
    git -C "$BRAWLERPAD_REF/BattleShip/torch" apply --reverse --check \
        "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch" >/dev/null 2>&1; then
     for patch_file in "$BRAWLERPAD_ROOT"/patches/battleship/*.patch; do
+        if [[ "$(basename "$patch_file")" > "0016-" ]] &&
+           ! git -C "$BRAWLERPAD_REF/BattleShip" apply --reverse --check \
+               "$patch_file" >/dev/null 2>&1; then
+            continue
+        fi
         mark_patch_applied "$BRAWLERPAD_REF/BattleShip" "$patch_file"
     done
     for patch_file in "$BRAWLERPAD_ROOT"/patches/libultraship/*.patch; do
@@ -144,6 +149,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0015-ios-tablet-touch-layout-v3.patch" 1
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0016-ios-picker-copy-cleanup.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0017-ios-tablet-touch-layout-v4.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

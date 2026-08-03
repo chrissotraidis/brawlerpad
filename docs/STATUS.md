@@ -131,6 +131,14 @@ and the remaining lifecycle/audio work stay explicitly open.
   during portrait/rotation transitions, and reduced idle fill/border alpha
   leaves more of the game readable. Fresh landscape and portrait captures on
   the sole iPad showed all 15 named buttons plus analog with visible gaps.
+- A second user reinspection caught Tablet V3's remaining weakness: placing Z
+  in the same right-side mass still made the shoulder, face, and C controls
+  read as one crowded overlay. Tablet V4 restores HarkinianPad's accepted
+  physical-iPad split, with Z between the left D-pad and stick, independent
+  A/B and C zones on the right, and an upper shoulder rail no longer derived
+  from the face stack. A fresh sole-simulator capture showed the groups
+  mutually separated; opening the native menu removed the gameplay overlay
+  and closing it restored every named target.
 - The revised iPad controls traversed title, Mode Select, one-minute VS setup,
   Kirby/CPU Donkey Kong character selection, Peach's Castle stage selection,
   live play, visible `DK WINS!` results, and return to character select. Analog,
@@ -145,6 +153,17 @@ and the remaining lifecycle/audio work stay explicitly open.
   requirement, created no archive, retained the source document, and removed
   both the Files-picker copy and BrawlerPad's staged import. This runtime test
   exposed and fixed the picker Inbox cleanup path for rejected inputs.
+- Installing the Tablet V4 Release build in place preserved the current
+  3,036-byte save at SHA-256
+  `35372f0f42334b27f192faf097a85205a5468ea1d7431ff9e7a330895a662c6b`
+  and configuration at SHA-256
+  `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`.
+  The save retained signature `0x29A`, exact stored/computed checksum
+  `8895910`, Castle, and `vs_total_battles: 1`. A fresh generic-iPhoneOS
+  arm64 build and recursive app/IPA audits passed; executable SHA-256 is
+  `d21407f6d7b0f3ece8c3ec91955203446967f91cd18b8ab3e92a065aa0cbb8a9`
+  and deterministic unsigned IPA SHA-256 is
+  `ac1820954dc1aa2088aaa80d0bfe9f80d4ae784e666dd7dbdaac652bf538604c`.
 - iOS lifecycle handling now gates simulation/render work while backgrounded,
   pauses and clears queued SDL audio, flushes window/config state safely, and
   resumes those paths on foreground events. Three visible iPad Home/resume

@@ -1,0 +1,76 @@
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -396,7 +396,7 @@
+ - (BOOL)isPortrait { return CGRectGetWidth(self.bounds) < CGRectGetHeight(self.bounds); }
+ - (NSString*)profileName {
+     if ([self isCompact]) return @"phone-v5";
+-    return [self isPortrait] ? @"tablet-portrait-v1" : @"tablet-v3";
++    return [self isPortrait] ? @"tablet-portrait-v1" : @"tablet-v4";
+ }
+ - (NSString*)storageKey { return [@"BrawlerPad.TouchLayout." stringByAppendingString:self.profile ?: [self profileName]]; }
+ - (void)loadProfile {
+@@ -525,16 +525,15 @@
+         return;
+     }
+
+-    // Tablet V3 incorporates HarkinianPad's later physical-iPad shoulder and
+-    // face-cluster refinements. Every group has its own thumb lane, and the
+-    // shoulder stack is derived from Z so those hit frames cannot collide.
++    // Tablet V4 restores HarkinianPad's accepted physical-iPad grip split.
++    // Z belongs between the left D-pad and stick, leaving A/B and the C
++    // diamond as two spacious right-thumb groups instead of one dense stack.
+     CGFloat scale = std::clamp(h / 834.0, .78, 1.12);
+     CGFloat edge = 18.0 * scale;
+     CGFloat right = safe.right + edge;
+     CGFloat usableWidth = w - safe.left - safe.right;
+     CGFloat railWidth = MIN(250.0 * scale, usableWidth * .22);
+     CGFloat leftCenter = safe.left + railWidth * .5;
+-    CGFloat rightCenter = w - safe.right - railWidth * .5;
+     CGFloat middleCenterY = h * .60;
+
+     CGFloat dSize = 52.0 * scale, dRadius = 48.0 * scale;
+@@ -548,30 +547,28 @@
+     [self setFrameFor:@"stick" center:CGPointMake(w * .164363, h * .745313)
+                  size:CGSizeMake(stickSize,stickSize)];
+     CGFloat faceSize = 66.0 * scale;
+-    CGFloat faceCenterX = rightCenter - 2.0 * scale;
+-    CGFloat faceCenterY = middleCenterY + 54.0 * scale;
+-    CGFloat faceHalf = faceSize * .5;
+-    CGPoint aCenter = CGPointMake(faceCenterX, faceCenterY + 12.0 * scale + faceHalf);
+-    CGPoint bCenter = CGPointMake(faceCenterX - faceSize - 10.0 * scale, faceCenterY);
+-    CGPoint zCenter = CGPointMake(faceCenterX, faceCenterY - faceHalf - 12.0 * scale);
++    CGPoint zCenter = CGPointMake(w * .193089, h * .612859);
++    CGPoint aCenter = CGPointMake(w * .893309, h * .693020);
++    CGPoint bCenter = CGPointMake(w * .826029, h * .635117);
+     [self setFrameFor:@"a" center:aCenter size:CGSizeMake(faceSize,faceSize)];
+     [self setFrameFor:@"b" center:bCenter size:CGSizeMake(faceSize,faceSize)];
+     [self setFrameFor:@"z" center:zCenter size:CGSizeMake(faceSize,faceSize)];
+
+-    CGFloat cSize = 46.0 * scale, cRadius = 48.0 * scale;
+-    CGFloat faceBottom = MAX(aCenter.y, MAX(bCenter.y,zCenter.y)) + faceHalf;
+-    CGFloat desiredC = faceBottom + 14.0 * scale + cRadius + cSize * .5;
+-    CGFloat maxC = h - safe.bottom - edge - cRadius - cSize * .5;
+-    CGPoint cc = CGPointMake(rightCenter + 8.0 * scale, MIN(desiredC,maxC));
+-    [self setFrameFor:@"c-up" center:CGPointMake(cc.x,cc.y-cRadius) size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-down" center:CGPointMake(cc.x,cc.y+cRadius) size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-left" center:CGPointMake(cc.x-cRadius,cc.y) size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-right" center:CGPointMake(cc.x+cRadius,cc.y) size:CGSizeMake(cSize,cSize)];
++    CGFloat cSize = 46.0 * scale;
++    [self setFrameFor:@"c-up" center:CGPointMake(w * .903338, h * .805484)
++                 size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-down" center:CGPointMake(w * .902240, h * .905152)
++                 size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-left" center:CGPointMake(w * .856515, h * .853922)
++                 size:CGSizeMake(cSize,cSize)];
++    [self setFrameFor:@"c-right" center:CGPointMake(w * .948331, h * .852945)
++                 size:CGSizeMake(cSize,cSize)];
+
+     CGFloat pillHeight = 54.0 * scale;
+     CGFloat shoulderWidth = 106.0 * scale;
+     CGFloat shoulderGap = 12.0 * scale;
+-    CGFloat rowY = zCenter.y - faceHalf - shoulderGap - pillHeight * 2.0 - shoulderGap;
++    CGFloat gripTopY = MAX(safe.top + edge, h * .38);
++    CGFloat rowY = gripTopY + 45.0 * scale;
+     [self setFrameFor:@"r"
+                center:CGPointMake(w - right - shoulderWidth * .5, rowY + pillHeight * .5)
+                  size:CGSizeMake(shoulderWidth,pillHeight)];
