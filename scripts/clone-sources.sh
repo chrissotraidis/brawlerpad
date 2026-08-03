@@ -121,6 +121,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0004-ios-audio-startup-recovery.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0005-ios-audio-buffering-telemetry.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
+    "$BRAWLERPAD_ROOT/patches/libultraship/0006-ios-responsive-menu-input.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
     "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
@@ -169,6 +171,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0022-ios-misplaced-rom-recovery.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0023-ios-performance-pause-reset.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0024-ios-responsive-settings.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

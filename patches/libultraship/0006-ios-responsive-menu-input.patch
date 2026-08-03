@@ -1,0 +1,78 @@
+diff --git a/src/ship/window/gui/Gui.cpp b/src/ship/window/gui/Gui.cpp
+index a082566e..c65185a5 100644
+--- a/src/ship/window/gui/Gui.cpp
++++ b/src/ship/window/gui/Gui.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include "ship/window/gui/Gui.h"
+ 
++#include <cmath>
+ #include <cstring>
+ #include <utility>
+ #include <string>
+@@ -53,6 +54,20 @@ namespace Ship {
+ #define TOGGLE_BTN ImGuiKey_F1
+ #define TOGGLE_PAD_BTN ImGuiKey_GamepadBack
+ 
++#if defined(__IOS__)
++constexpr bool UseTabletUIScale(int width, int height) {
++    const int shortestSide = width < height ? width : height;
++    const int longestSide = width > height ? width : height;
++    const float aspectRatio = shortestSide > 0 ? static_cast<float>(longestSide) / shortestSide : 0.0f;
++    return shortestSide >= 600 && aspectRatio < 1.6f;
++}
++
++static_assert(!UseTabletUIScale(2532, 1170));
++static_assert(!UseTabletUIScale(844, 390));
++static_assert(UseTabletUIScale(2732, 2048));
++static_assert(UseTabletUIScale(1366, 1024));
++#endif
++
+ Gui::Gui(std::vector<std::shared_ptr<GuiWindow>> guiWindows) : mNeedsConsoleVariableSave(false) {
+     mGameOverlay = std::make_shared<GameOverlay>();
+ 
+@@ -121,12 +136,15 @@ void Gui::Init(GuiWindowInitData windowImpl) {
+     SDL_Rect displayBounds = {};
+     float uiScale = 1.0f;
+     if (SDL_GetDisplayUsableBounds(0, &displayBounds) == 0) {
+-        const int shortestSide = displayBounds.w < displayBounds.h ? displayBounds.w : displayBounds.h;
+-        if (shortestSide >= 600) {
++        // SDL reports Retina pixels on some iOS versions, so the shortest
++        // side alone mistakes phones for tablets. iPads remain below 1.6:1.
++        if (UseTabletUIScale(displayBounds.w, displayBounds.h)) {
+             uiScale = 2.0f;
+         }
+     }
++    SPDLOG_INFO("iOS ImGui display={}x{} scale={}", displayBounds.w, displayBounds.h, uiScale);
+     ImGui::GetStyle().ScaleAllSizes(uiScale);
++    ImGui::GetStyle().ScrollbarSize = std::fmax(18.0f, ImGui::GetStyle().ScrollbarSize);
+     mImGuiIo->FontGlobalScale = uiScale;
+ #endif
+ 
+@@ -301,12 +319,24 @@ bool Gui::SupportsViewports() {
+ void Gui::HandleWindowEvents(WindowEvent event) {
+     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+         case WindowBackend::FAST3D_SDL_OPENGL:
+-        case WindowBackend::FAST3D_SDL_METAL:
+-            ImGui_ImplSDL2_ProcessEvent(static_cast<const SDL_Event*>(event.Sdl.Event));
++        case WindowBackend::FAST3D_SDL_METAL: {
++            const SDL_Event* sdlEvent = static_cast<const SDL_Event*>(event.Sdl.Event);
++            ImGui_ImplSDL2_ProcessEvent(sdlEvent);
++#if defined(__IOS__)
++            // ImGui's SDL backend translates a touchscreen to mouse taps, but
++            // mouse dragging does not scroll. Convert deliberate vertical
++            // finger movement into wheel input while a menu owns the screen.
++            if (sdlEvent->type == SDL_FINGERMOTION && GetMenuOrMenubarVisible() &&
++                std::fabs(sdlEvent->tfinger.dy) > std::fabs(sdlEvent->tfinger.dx)) {
++                const float scale = std::fmax(1.0f, mImGuiIo->FontGlobalScale);
++                mImGuiIo->AddMouseWheelEvent(0.0f, sdlEvent->tfinger.dy * 6.0f / scale);
++            }
++#endif
+ #if defined(__ANDROID__) || defined(__IOS__)
+             Mobile::ImGuiProcessEvent(mImGuiIo->WantTextInput);
+ #endif
+             break;
++        }
+ #ifdef ENABLE_DX11
+         case WindowBackend::FAST3D_DXGI_DX11:
+             ImGui_ImplWin32_WndProcHandler(static_cast<HWND>(event.Win32.Handle), event.Win32.Msg, event.Win32.Param1,
