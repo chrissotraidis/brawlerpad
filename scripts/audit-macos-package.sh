@@ -3,11 +3,18 @@ set -euo pipefail
 
 BRAWLERPAD_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="${1:-$BRAWLERPAD_ROOT/ref/BattleShip/dist/BrawlerPad.app}"
+DMG="${2:-}"
 
 case "$APP" in
     /*) ;;
     *) APP="$BRAWLERPAD_ROOT/$APP" ;;
 esac
+if [ -n "$DMG" ]; then
+    case "$DMG" in
+        /*) ;;
+        *) DMG="$BRAWLERPAD_ROOT/$DMG" ;;
+    esac
+fi
 
 fail() {
     echo "macOS package audit failed: $*" >&2
@@ -23,6 +30,13 @@ RESOURCES="$APP/Contents/Resources"
     fail "main executable is not arm64-only"
 vtool -show-build "$EXECUTABLE" | grep -Eq 'platform +MACOS$' ||
     fail "main executable is not a macOS product"
+[ -n "$(dwarfdump --uuid "$EXECUTABLE" 2>/dev/null)" ] ||
+    fail "main executable is missing the LC_UUID required by macOS dyld"
+if nm -a "$EXECUTABLE" 2>/dev/null |
+    awk 'index($0, " OSO ") { found=1 }
+         END { exit found ? 0 : 1 }'; then
+    fail "main executable still contains object-file source paths"
+fi
 [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = \
     "com.brawlerpad.app.macos" ] || fail "unexpected bundle identifier"
 [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")" = \
@@ -80,3 +94,25 @@ while IFS= read -r -d '' candidate; do
 done < <(find "$APP" -type f -print0)
 
 echo "macOS package audit passed: $APP"
+
+if [ -n "$DMG" ]; then
+    [ -f "$DMG" ] || fail "DMG not found: $DMG"
+    hdiutil verify "$DMG" >/dev/null || fail "DMG verification failed: $DMG"
+    mount_dir="$(mktemp -d /tmp/brawlerpad-dmg-audit.XXXXXX)"
+    mounted=0
+    cleanup_dmg_mount() {
+        if [ "$mounted" -eq 1 ]; then
+            hdiutil detach "$mount_dir" >/dev/null 2>&1 || true
+        fi
+        rmdir "$mount_dir" >/dev/null 2>&1 || true
+    }
+    trap cleanup_dmg_mount EXIT INT TERM
+    hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$DMG" >/dev/null ||
+        fail "DMG could not be mounted read-only"
+    mounted=1
+    [ -d "$mount_dir/BrawlerPad.app" ] || fail "DMG does not contain BrawlerPad.app"
+    "$BRAWLERPAD_ROOT/scripts/audit-macos-package.sh" "$mount_dir/BrawlerPad.app"
+    cleanup_dmg_mount
+    trap - EXIT INT TERM
+    echo "macOS DMG audit passed: $DMG"
+fi

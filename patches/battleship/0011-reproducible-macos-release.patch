@@ -1,0 +1,209 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1559c7e..6cce7b7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -903,6 +903,9 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     endif()
+ else()
+     add_executable(${PROJECT_NAME} ${SSB64_SRC_PORT} ${SSB64_DEBUG_TOOLS} $<TARGET_OBJECTS:ssb64_game>)
++    if(BRAWLERPAD_BRANDING AND APPLE)
++        target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-reproducible" "-Wl,-objc_stubs_small")
++    endif()
+ 
+     # User-facing binary name. The CMake target keeps the historical
+     # `ssb64` identifier (matches the repo, build dirs, internal symbols),
+diff --git a/cmake/macho_text_rwx.py b/cmake/macho_text_rwx.py
+index 086fbbf..d8ae928 100644
+--- a/cmake/macho_text_rwx.py
++++ b/cmake/macho_text_rwx.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Raise the __TEXT segment's maxprot to rwx in a Mach-O binary.
++"""Normalize release properties in a Mach-O binary before code signing.
+ 
+ Why: the mod hook backend (funchook) rewrites engine function prologues
+ at runtime. Apple Silicon caps a normally-linked __TEXT segment at
+@@ -14,8 +14,13 @@ read-only/executable normally — only the *ceiling* is raised.
+ (ld-prime) silently ignores it, so we edit the load command directly.
+ Run BEFORE codesign so the signature seals the modified binary.
+ 
++With ``--reproducible-uuid``, the LC_UUID is derived from the slice content
++while ignoring the existing UUID and code-signature blob. This keeps the UUID
++required by dyld while making identical links converge across checkout roots.
++
+ Handles thin arm64 and fat/universal Mach-O. Idempotent.
+ """
++import hashlib
+ import struct
+ import sys
+ 
+@@ -25,10 +30,12 @@ RWX = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE
+ MH_MAGIC_64, MH_CIGAM_64 = 0xFEEDFACF, 0xCFFAEDFE
+ FAT_MAGIC, FAT_CIGAM = 0xCAFEBABE, 0xBEBAFECE
+ LC_SEGMENT_64 = 0x19
++LC_UUID = 0x1B
++LC_CODE_SIGNATURE = 0x1D
+ 
+ 
+-def patch_macho_at(buf, base):
+-    """Patch the __TEXT LC_SEGMENT_64.maxprot of one Mach-O at offset base.
++def patch_macho_at(buf, base, size, reproducible_uuid):
++    """Normalize one Mach-O slice at ``base`` with byte length ``size``.
+ 
+     Self-detects this slice's endianness from its magic.
+     """
+@@ -40,7 +47,10 @@ def patch_macho_at(buf, base):
+         return False
+     ncmds = struct.unpack_from(e + "I", buf, base + 16)[0]
+     off = base + 32  # sizeof(mach_header_64)
+-    changed = False
++    text_changed = False
++    uuid_off = None
++    linkedit_size_offsets = None
++    signature_command = None
+     for _ in range(ncmds):
+         cmd, cmdsize = struct.unpack_from(e + "II", buf, off)
+         if cmd == LC_SEGMENT_64:
+@@ -51,19 +61,55 @@ def patch_macho_at(buf, base):
+                 maxprot = struct.unpack_from(e + "i", buf, maxprot_off)[0]
+                 if maxprot != RWX:
+                     struct.pack_into(e + "i", buf, maxprot_off, RWX)
+-                    changed = True
+-                break
++                    text_changed = True
++            elif segname == b"__LINKEDIT":
++                # vmsize and filesize include the linker-generated signature.
++                linkedit_size_offsets = (off + 32, off + 48)
++        elif cmd == LC_UUID:
++            uuid_off = off + 8
++        elif cmd == LC_CODE_SIGNATURE:
++            dataoff, datasize = struct.unpack_from(e + "II", buf, off + 8)
++            signature_command = (off, cmdsize, dataoff, datasize)
+         off += cmdsize
+-    return changed
++
++    uuid_changed = False
++    if reproducible_uuid:
++        if uuid_off is None:
++            raise ValueError("Mach-O slice is missing LC_UUID")
++        normalized = bytearray(buf[base:base + size])
++        relative_uuid_off = uuid_off - base
++        normalized[relative_uuid_off:relative_uuid_off + 16] = b"\0" * 16
++        hash_end = size
++        if signature_command is not None:
++            command_off, command_size, dataoff, datasize = signature_command
++            if dataoff + datasize > size:
++                raise ValueError("Mach-O code signature extends beyond its slice")
++            relative_command_off = command_off - base
++            normalized[relative_command_off:relative_command_off + command_size] = \
++                b"\0" * command_size
++            if linkedit_size_offsets is not None:
++                for absolute_size_off in linkedit_size_offsets:
++                    relative_size_off = absolute_size_off - base
++                    normalized[relative_size_off:relative_size_off + 8] = b"\0" * 8
++            hash_end = dataoff
++        content_uuid = bytearray(hashlib.sha256(normalized[:hash_end]).digest()[:16])
++        # Match the RFC 4122 version/variant shape used by Apple's content UUIDs.
++        content_uuid[6] = (content_uuid[6] & 0x0F) | 0x30
++        content_uuid[8] = (content_uuid[8] & 0x3F) | 0x80
++        if buf[uuid_off:uuid_off + 16] != content_uuid:
++            buf[uuid_off:uuid_off + 16] = content_uuid
++            uuid_changed = True
++    return text_changed, uuid_changed
+ 
+ 
+-def main(path):
++def main(path, reproducible_uuid=False):
+     with open(path, "rb") as f:
+         buf = bytearray(f.read())
+ 
+     # fat_header is always big-endian on disk.
+     be_magic = struct.unpack_from(">I", buf, 0)[0]
+-    any_changed = False
++    text_changed = False
++    uuid_changed = False
+ 
+     if be_magic in (FAT_MAGIC, FAT_CIGAM):
+         nfat = struct.unpack_from(">I", buf, 4)[0]
+@@ -72,19 +118,34 @@ def main(path):
+             # after the 8-byte fat_header.
+             ent = 8 + i * 20
+             arch_off = struct.unpack_from(">I", buf, ent + 8)[0]
+-            any_changed |= patch_macho_at(buf, arch_off)
++            arch_size = struct.unpack_from(">I", buf, ent + 12)[0]
++            slice_text_changed, slice_uuid_changed = patch_macho_at(
++                buf, arch_off, arch_size, reproducible_uuid)
++            text_changed |= slice_text_changed
++            uuid_changed |= slice_uuid_changed
+     else:
+-        any_changed |= patch_macho_at(buf, 0)
++        text_changed, uuid_changed = patch_macho_at(
++            buf, 0, len(buf), reproducible_uuid)
+ 
+-    if any_changed:
++    if text_changed or uuid_changed:
+         with open(path, "wb") as f:
+             f.write(buf)
+-        print("macho_text_rwx: __TEXT maxprot -> rwx in %s" % path)
++        changes = []
++        if text_changed:
++            changes.append("__TEXT maxprot -> rwx")
++        if uuid_changed:
++            changes.append("content-derived LC_UUID")
++        print("macho_text_rwx: %s in %s" % (" + ".join(changes), path))
+     else:
+-        print("macho_text_rwx: __TEXT maxprot already rwx in %s (noop)" % path)
++        print("macho_text_rwx: requested properties already normalized in %s (noop)" % path)
+ 
+ 
+ if __name__ == "__main__":
+-    if len(sys.argv) != 2:
+-        sys.exit("usage: macho_text_rwx.py <mach-o>")
+-    main(sys.argv[1])
++    args = sys.argv[1:]
++    reproducible_uuid = False
++    if args and args[0] == "--reproducible-uuid":
++        reproducible_uuid = True
++        args.pop(0)
++    if len(args) != 1:
++        sys.exit("usage: macho_text_rwx.py [--reproducible-uuid] <mach-o>")
++    main(args[0], reproducible_uuid)
+diff --git a/scripts/package-macos.sh b/scripts/package-macos.sh
+index 7f2b4d6..2d102d5 100755
+--- a/scripts/package-macos.sh
++++ b/scripts/package-macos.sh
+@@ -94,9 +94,8 @@ step "Encoding credits text"
+     for f in staff.credits.us.txt titles.credits.us.txt; do
+         python3 "$ROOT/tools/creditsTextConverter.py" "$f" > /dev/null
+     done
+-    for f in info.credits.us.txt companies.credits.us.txt; do
+-        python3 "$ROOT/tools/creditsTextConverter.py" -paragraphFont "$f" > /dev/null
+-    done
++    python3 "$ROOT/tools/creditsTextConverter.py" -paragraphFont -multiline info.credits.us.txt > /dev/null
++    python3 "$ROOT/tools/creditsTextConverter.py" -paragraphFont companies.credits.us.txt > /dev/null
+ )
+ 
+ # ── 1. Configure + build with NON_PORTABLE=ON ──
+@@ -146,6 +145,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/yamls/$VER"
+ 
+ cp "$SSB64_BIN"  "$APP/Contents/MacOS/$APP_NAME"
+ cp "$TORCH_BIN"  "$APP/Contents/MacOS/torch"
++if [[ "${BRAWLERPAD_BRANDING:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
++    strip -S -x "$APP/Contents/MacOS/$APP_NAME"
++fi
+ cp "$F3D_O2R"    "$APP/Contents/Resources/f3d.o2r"
+ cp "$ROOT/gamecontrollerdb.txt" "$APP/Contents/Resources/gamecontrollerdb.txt"
+ cp "$ROOT/config.yml" "$APP/Contents/Resources/config.yml"
+@@ -384,6 +386,12 @@ for bin in "$APP/Contents/MacOS/$APP_NAME" "$APP/Contents/MacOS/torch"; do
+     done
+ done
+ 
++if [[ "${BRAWLERPAD_BRANDING:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
++    step "Normalizing release Mach-O UUID"
++    python3 "$ROOT/cmake/macho_text_rwx.py" --reproducible-uuid \
++        "$APP/Contents/MacOS/$APP_NAME"
++fi
++
+ # ── 4b. Sign the bundle as a unit ──
+ # Sign after dylibbundler and install_name_tool because both mutate Mach-O
+ # load commands. Developer ID CI uses hardened runtime + secure timestamp

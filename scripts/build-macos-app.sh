@@ -4,6 +4,7 @@ set -euo pipefail
 BRAWLERPAD_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BATTLESHIP_SOURCE="$BRAWLERPAD_ROOT/ref/BattleShip"
 APP="$BATTLESHIP_SOURCE/dist/BrawlerPad.app"
+DMG="$BATTLESHIP_SOURCE/dist/BrawlerPad.dmg"
 
 if [ ! -f "$BATTLESHIP_SOURCE/CMakeLists.txt" ]; then
     echo "Pinned sources are missing; run scripts/clone-sources.sh first." >&2
@@ -22,5 +23,6 @@ BATTLESHIP_VERSION=0.1.0 \
 JOBS="${JOBS:-$(sysctl -n hw.logicalcpu)}" \
     "$BATTLESHIP_SOURCE/scripts/package-macos.sh"
 
-"$BRAWLERPAD_ROOT/scripts/audit-macos-package.sh" "$APP"
+"$BRAWLERPAD_ROOT/scripts/audit-macos-package.sh" "$APP" "$DMG"
 echo "BrawlerPad macOS app: $APP"
+echo "BrawlerPad macOS DMG: $DMG"
