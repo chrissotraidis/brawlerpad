@@ -89,7 +89,7 @@ and complete a match, background/foreground, terminate, and relaunch.
 |---|---|---|---|
 | Build/install/launch | Pass (iPhone 17 Pro, iOS 26.5) | Pass (iPad Pro 13-inch M5, iOS 26.5) | Pending |
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
-| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch) | Pending |
+| ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch; missing-resource and invalid-size rejection/cleanup also pass) | Pending |
 | Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Pass (touch-only title → VS → CSS → stage → one-minute match → results → CSS; Classic CSS/live combat/pause also covered; true simultaneous contacts pending hardware) | Pending |
 | Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
 | Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
@@ -150,6 +150,24 @@ uses a 2x base scale when the shortest usable display side is at least 600
 points and scales the first-run window's explicit dimensions with it. A clean
 reinstall showed readable, unclipped guidance and a complete Choose ROM button,
 then the preserved generated archive booted the game again.
+
+### iPad negative ROM/resource proof
+
+On 2026-08-03, an isolated copy of the current Release simulator app used
+bundle identifier `com.brawlerpad.app.negative` on the same sole booted iPad.
+Its separate empty container visibly reached the branded first-run wizard,
+proving the missing-resource fallback without modifying the completed-match
+save container.
+
+The native Files picker then selected a deliberately invalid 44-byte
+`invalid-test.z64` from that test app's Documents folder. Before extraction,
+the app retained only its own `tmp/BrawlerPad-ROM-Import.z64`; the picker Inbox
+copy had already been removed. Extract reported `Unsupported ROM size:
+expected 16 MiB, got 44 bytes`. After rejection, the entire temporary import
+set was empty, the original Documents fixture was unchanged, and no `.o2r`
+was generated. This proves visible rejection, diagnostic specificity, source
+preservation, and cleanup on the failure path; supported-ROM extraction is
+covered separately above.
 
 ## Touch coverage
 
@@ -331,12 +349,12 @@ only the expected `shaders/` hierarchy and Metal/MSL/GLSL/Slang/HLSL source;
 the audit rejects other O2R files, unsafe paths, non-shader entries, corruption,
 or a shader archive over 1 MiB.
 
-The current V5/input-boundary unsigned
+The current picker-cleanup unsigned
 `BrawlerPad-0.1.0-preview.1-unsigned.ipa` passed the
 same audit with SHA-256
-`1654e39efef8f9cd27ca11d1fadfaeb447e7069f575f1d9418719f114c2f2b37`;
+`94672dc88e1171cda299e9a6aedc9ee0698c3c8b3a023862f314981857aa687f`;
 the contained arm64 executable has SHA-256
-`8c91deb84b960b29e2e4ea6818128c03b1b139af35f9d87660cdd618a087f7bf`.
+`906fa018fc237a047cbc811f8f3346aa16f6575aa1f53d89847f3100e2b89289`.
 Repeating packaging from the audited app produced an identical IPA.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,

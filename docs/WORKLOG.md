@@ -416,3 +416,31 @@
   `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
 - Captured the production delta as ordered BattleShip patch 0015. Clean
   reverse/apply checks reproduced the tested touch source byte-for-byte.
+
+## 2026-08-03 — invalid ROM rejection and picker cleanup
+
+- Kept the iPad Pro 13-inch (M5) as the machine's only booted simulator and
+  installed the current Release app under an isolated negative-test bundle ID,
+  preserving the completed-match BrawlerPad container.
+- Visibly verified the branded first-run wizard with no generated archive,
+  then selected a deliberate 44-byte `.z64` through the native Files picker.
+  The app rejected it with the exact 16 MiB requirement and generated no O2R.
+- Inspection caught the Files provider's transient Inbox copy surviving the
+  picker callback. The picker now removes only copies inside the app's own
+  temporary directory, never the user's source document, after staging or an
+  extension failure.
+- Rebuilt the universal Release simulator app and repeated the flow. Before
+  extraction only BrawlerPad's staged import remained; after rejection all
+  temporary ROM copies were gone while the source fixture was unchanged.
+- Captured the fix as ordered BattleShip patch 0016 and added it to clean
+  source replay.
+- A fresh generic-iPhoneOS build directory completed a full Release configure,
+  compile, and recursive app audit. Packaging the exact app twice produced
+  byte-identical unsigned IPAs. The executable SHA-256 is
+  `906fa018fc237a047cbc811f8f3346aa16f6575aa1f53d89847f3100e2b89289`;
+  the IPA SHA-256 is
+  `94672dc88e1171cda299e9a6aedc9ee0698c3c8b3a023862f314981857aa687f`.
+- Removed the isolated test bundle, installed the fixed Simulator app over the
+  normal BrawlerPad bundle, and launched directly into rendered gameplay. The
+  migrated production save retained SHA-256
+  `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.

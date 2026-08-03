@@ -42,6 +42,10 @@ publish controller state before game logic consumes it.
 The same run produced a checksum-valid save with one completed VS battle;
 terminate, repeated in-place installs, and relaunch preserved both that save
 and the branded configuration.
+An isolated iPad negative test also proves the no-resource first-run path and
+invalid-ROM handling: a 44-byte `.z64` is rejected with the exact size error,
+no archive is created, the user's source remains untouched, and all temporary
+picker/import copies are removed.
 Three iPad Home/resume cycles preserved the same process, flushed settings,
 resumed Metal and touch presentation, and produced no crash report. The app
 also passed an iPhone Home/resume cycle with a separately accepted,

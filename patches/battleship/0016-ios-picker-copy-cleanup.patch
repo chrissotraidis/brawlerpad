@@ -1,0 +1,47 @@
+--- a/port/ios/ios_rom_picker.mm
++++ b/port/ios/ios_rom_picker.mm
+@@ -52,6 +52,28 @@
+     return controller;
+ }
+
++void RemovePickerCopyIfTemporary(NSURL* sourceURL) {
++    if (sourceURL == nil || !sourceURL.isFileURL) {
++        return;
++    }
++
++    NSString* sourcePath = sourceURL.path.stringByStandardizingPath;
++    NSString* temporaryRoot = NSTemporaryDirectory().stringByStandardizingPath;
++    if (![temporaryRoot hasSuffix:@"/"]) {
++        temporaryRoot = [temporaryRoot stringByAppendingString:@"/"];
++    }
++    if (![sourcePath hasPrefix:temporaryRoot]) {
++        return;
++    }
++
++    NSError* cleanupError = nil;
++    if (![NSFileManager.defaultManager removeItemAtURL:sourceURL error:&cleanupError] &&
++        cleanupError.code != NSFileNoSuchFileError) {
++        NSLog(@"[BrawlerPad] could not remove Files picker copy at %@: %@",
++              sourcePath, cleanupError.localizedDescription);
++    }
++}
++
+ } // namespace
+
+ @interface BrawlerPadRomPickerDelegate : NSObject <UIDocumentPickerDelegate>
+@@ -72,6 +94,7 @@
+     NSString* extension = sourceURL.pathExtension.lowercaseString;
+     NSSet<NSString*>* allowed = [NSSet setWithObjects:@"z64", @"n64", @"v64", nil];
+     if (![allowed containsObject:extension]) {
++        RemovePickerCopyIfTemporary(sourceURL);
+         gError = "Select a .z64, .n64, or .v64 ROM file";
+         gState = PickerState::Error;
+         gDelegate = nil;
+@@ -90,6 +113,7 @@
+     if (securityScoped) {
+         [sourceURL stopAccessingSecurityScopedResource];
+     }
++    RemovePickerCopyIfTemporary(sourceURL);
+
+     if (!copied) {
+         gError = copyError.localizedDescription.UTF8String ?: "Could not copy the selected ROM";

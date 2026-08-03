@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-08-02.
+Updated: 2026-08-03.
 
 ## Current milestone
 
@@ -138,6 +138,13 @@ and the remaining lifecycle/audio work stay explicitly open.
   signature `0x29A`, matching stored/computed checksum `8892894`, Castle and
   Kirby/Donkey Kong records, `vs_total_battles: 1`, and SHA-256
   `3848e4005b6fe70a3c4dea54c5d46ac95e37a1d1be574a58fd0683a1b5c69d9c`.
+- An isolated `com.brawlerpad.app.negative` install on the sole iPad proved
+  the missing-resource path and invalid-ROM path without touching the proven
+  save container. With no archive it showed the branded first-run guidance;
+  selecting a deliberate 44-byte `.z64` reported the exact 16 MiB size
+  requirement, created no archive, retained the source document, and removed
+  both the Files-picker copy and BrawlerPad's staged import. This runtime test
+  exposed and fixed the picker Inbox cleanup path for rejected inputs.
 - iOS lifecycle handling now gates simulation/render work while backgrounded,
   pauses and clears queued SDL audio, flushes window/config state safely, and
   resumes those paths on foreground events. Three visible iPad Home/resume
@@ -199,15 +206,15 @@ and the remaining lifecycle/audio work stay explicitly open.
   Stable path mapping, deterministic shader archiving, and a reproducible
   device link made its executable, shader archive, and final IPA byte-identical
   to independently produced artifacts from the primary checkout.
-- The current V5/input-boundary device executable SHA-256 is
-  `8c91deb84b960b29e2e4ea6818128c03b1b139af35f9d87660cdd618a087f7bf`;
+- The current picker-cleanup device executable SHA-256 is
+  `906fa018fc237a047cbc811f8f3346aa16f6575aa1f53d89847f3100e2b89289`;
   the audited unsigned IPA is
-  `1654e39efef8f9cd27ca11d1fadfaeb447e7069f575f1d9418719f114c2f2b37`,
+  `94672dc88e1171cda299e9a6aedc9ee0698c3c8b3a023862f314981857aa687f`,
   and `f3d.o2r` retained SHA-256
   `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 - The device build now refuses an existing non-iOS CMake cache before
   configuration. The pre-V4 clean-checkout binary/IPA replay was byte-identical;
-  ordered BattleShip patches through 0015 and decomp patches through 0002 were
+  ordered BattleShip patches through 0016 and decomp patches through 0002 were
   replayed exactly at the pinned upstream commits, reproducing the latest
   production sources byte-for-byte. The fresh device build and package audit
   passed; a second packaging pass was byte-identical.
