@@ -91,11 +91,11 @@ and complete a match, background/foreground, terminate, and relaunch.
 | Metal/game render | Pass (visible native attract scene) | Pass (visible native opening scene) | Pending |
 | ROM import/extraction | Pass (Files + SHA-1 + linked Torch) | Pass (Files + SHA-1 + linked Torch; missing-resource and invalid-size rejection/cleanup also pass) | Pending |
 | Touch menus and gameplay | Pass (touch-only title → VS → CSS → stage → match/pause → results → CSS; true simultaneous contacts pending hardware) | Pass (touch-only title → VS → CSS → stage → one-minute match → results → CSS; Classic CSS/live combat/pause also covered; true simultaneous contacts pending hardware) | Pending |
-| Controller connect/reconnect | SDL registration only | Host `Gamepad` detection + auto-hide pass; reconnect pending | Pending |
-| Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Pause/clear/resume path integrated; audible interruption/routes pending | Pending |
+| Controller connect/reconnect | SDL registration only | Forwarded MFi `Gamepad` detection + auto-hide pass; physical input/reconnect pending | Pending |
+| Audio/interruption/routes | Pause/clear/resume path integrated; audible interruption/routes pending | Synthetic begin/end dispatch and host-output switch recovery pass; audible OS interruption/routes pending | Pending |
 | Background/foreground | Pass (1 visible Home/resume cycle, same PID, config flush, no crash) | Pass (3 visible Home/resume cycles, same PID, config flush, no crash) | Pending |
 | Save/update persistence | Pass (content-level save + config verification after terminate/relaunch and repeated in-place installs) | Pass (checksum-valid save + config/archive after terminate/relaunch and in-place reinstall) | Pending |
-| Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Pass (V3 landscape plus dedicated tall/portrait profile inspected live) | Pending |
+| Rotation/safe areas/aspect | Partial pass (both landscape sides, V5 layout) | Pass (V4 landscape plus dedicated tall/portrait profile inspected live) | Pending |
 
 ### iPhone first-run proof
 
@@ -334,15 +334,36 @@ touch accessibility tree reappeared after each resume, and no BrawlerPad crash
 report appeared in either the simulator or host diagnostic-report locations.
 
 This proves iPad background/foreground recovery and the frame/audio pause
-plumbing exercised by SDL application events. It does not prove audible audio
-interruption behavior, route changes, suspension under memory pressure, or
-physical-device timing; those remain explicit hardware tests.
+plumbing exercised by SDL application events. A later live-LLDB probe resolved
+SDL's linked `-[SDLInterruptionListener audioSessionInterruption:]`, posted
+synthetic interruption-began and interruption-ended notifications against the
+active `AVAudioSession`, and recorded an exact breakpoint hit count of two.
+After detaching, the same PID continued advancing the rendered attract scene.
+
+The Simulator's Audio Output was then switched from the active Jump Desktop
+route to MacBook Air Speakers and back. The app kept PID `45456`, retained the
+complete touch accessibility tree, and continued rendering through both host
+output switches. A separate `SDL_APP_LOWMEMORY` event was pushed into the live
+SDL queue; a type-conditioned breakpoint reached
+`GfxWindowBackendSDL2::HandleSingleEvent`, and the same process returned to the
+animated title with no recent BrawlerPad crash report. The configuration
+retained SHA-256
+`b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`,
+and the current save retained signature `0x29A`, exact stored/computed checksum
+`8895910`, Castle, and one VS battle.
+
+This proves listener presence, begin/end notification dispatch, host-output
+switch survival, low-memory dispatch, rendering recovery, and persisted-data
+integrity in Simulator. It does not prove an audible pause, a real
+phone-call/Siri interruption, a headphone/Bluetooth `AVAudioSession` route
+change, memory-pressure suspension, or physical-device timing; those remain
+explicit hardware tests.
 
 The sole simulator was then switched to iPhone 17 Pro with a verified
 zero-booted interval. One five-second Home/resume cycle retained PID `18400`,
 updated the configuration file, returned the already-running process, restored
 the Metal game and phone V3 overlay, and left zero recent crash reports. More
-cycles, OS interruption injection, and physical-device timing remain pending.
+cycles and physical-device timing remain pending.
 
 ## Package audit
 

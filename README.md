@@ -59,9 +59,11 @@ ROM/privacy audits, and show a fully branded ROM-free first-run wizard. A
 second checkout reproduces the stripped executable payload, required Mach-O
 UUID, Apple CDHash, shader archive, and every non-signature bundle file.
 
-The remaining simultaneous-multitouch matrix, extended lifecycle stress, real
-audio interruption/route testing, and physical-device testing remain in
-progress. See
+Simulator now also covers synthetic interruption begin/end dispatch, a
+low-memory event, and a live host-output switch with non-crashing recovery.
+The remaining simultaneous-multitouch matrix, audible OS-generated
+interruption/route testing, physical-controller gameplay, and physical-device
+testing remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 

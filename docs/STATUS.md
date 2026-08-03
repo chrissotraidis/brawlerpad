@@ -249,12 +249,14 @@ and the remaining lifecycle/audio work stay explicitly open.
 
 ## In progress
 
-- Extend lifecycle stress and verify real audio interruptions and route changes
-  on physical hardware.
+- Repeat the proven synthetic lifecycle/audio dispatch with audible,
+  OS-generated interruptions and headphone/Bluetooth route changes on physical
+  hardware.
 - Complete simultaneous-multitouch acceptance and repeat the simulator flows
   on physical iPhone and iPad hardware.
-- Audible-output confirmation and physical-controller testing remain pending;
-  no controller is currently attached.
+- Audible-output confirmation and physical-controller gameplay remain pending.
+  Simulator exposes a forwarded MFi `Gamepad`, but the Mac's paired 8BitDo and
+  Xbox controllers are both currently powered off/disconnected.
 
 ## Not yet claimed
 

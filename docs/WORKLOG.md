@@ -477,3 +477,34 @@
   `ac1820954dc1aa2088aaa80d0bfe9f80d4ae784e666dd7dbdaac652bf538604c`.
   A second packaging pass was byte-identical. True simultaneous touch and
   physical-device feel remain open hardware checks.
+
+## 2026-08-03 — simulator interruption and low-memory dispatch
+
+- Kept the iPad Pro 13-inch (M5) as the machine's only booted simulator and
+  audited the linked SDL CoreAudio implementation before changing product
+  code. SDL already owns `AVAudioSessionInterruptionNotification`, pauses its
+  AudioQueue on begin, resumes on end, and retries resume when the app becomes
+  active, matching the maintained HarkinianPad evidence.
+- Attached LLDB briefly to live BrawlerPad PID `45456`, resolved
+  `-[SDLInterruptionListener audioSessionInterruption:]`, and posted synthetic
+  began/ended notifications against the active `AVAudioSession`. The resolved
+  breakpoint recorded exactly two hits; after detaching, the same process
+  continued advancing the rendered attract sequence.
+- Switched Simulator Audio Output from the active Jump Desktop route to
+  MacBook Air Speakers and back. The process, Metal scene, full Tablet V4
+  accessibility tree, and controls survived both host-output changes.
+- Pushed `SDL_APP_LOWMEMORY` into the live SDL queue and conditioned a
+  breakpoint on event type `0x102`. It reached
+  `GfxWindowBackendSDL2::HandleSingleEvent`; the same PID returned to the
+  animated title and no recent BrawlerPad crash report appeared.
+- Post-probe configuration retained SHA-256
+  `b2caedeec889c300f45c0b69f83f0ce405561ff418027f202908946f3fa7416a`.
+  The current save retained signature `0x29A`, exact checksum `8895910`,
+  Castle, and one VS battle. The Simulator runtime exposed one forwarded MFi
+  `Gamepad` with 23 buttons, six axes, and three D-pads; an attempted connection
+  to the Mac's paired 8BitDo Lite 2 returned to `Not Connected`, so no physical
+  input action is claimed.
+- This closes synthetic interruption and low-memory dispatch plus host-output
+  switch recovery in Simulator. Audible OS interruptions, real audio-device
+  route changes, physical-controller actions/reconnect, true simultaneous
+  touch, and physical-device timing remain hardware acceptance work.
