@@ -1,0 +1,34 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6cce7b7..ec7c706 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -878,13 +878,20 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+     )
+     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "main")
+ elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
++    set(SSB64_IOS_ASSET_CATALOG
++        "${CMAKE_CURRENT_SOURCE_DIR}/ios/BrawlerPad.xcassets")
+     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+-        "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in")
++        "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
++        "${SSB64_IOS_ASSET_CATALOG}/AppIcon.appiconset/Contents.json"
++        "${SSB64_IOS_ASSET_CATALOG}/AppIcon.appiconset/AppIcon.png")
++    set_source_files_properties(${SSB64_IOS_ASSET_CATALOG} PROPERTIES
++        MACOSX_PACKAGE_LOCATION Resources)
+     add_executable(${PROJECT_NAME} MACOSX_BUNDLE
+         ${SSB64_SRC_PORT}
+         ${SSB64_DEBUG_TOOLS}
+         $<TARGET_OBJECTS:ssb64_game>
+         port/coroutine_aarch64.S
++        ${SSB64_IOS_ASSET_CATALOG}
+     )
+     set_target_properties(${PROJECT_NAME} PROPERTIES
+         OUTPUT_NAME "BrawlerPad"
+@@ -894,6 +901,7 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
+         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.brawlerpad.app"
+         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
++        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "17.0"
+         XCODE_ATTRIBUTE_SUPPORTS_MACCATALYST NO
+         XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic

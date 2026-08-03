@@ -1,0 +1,118 @@
+diff --git a/include/ship/audio/SDLAudioPlayer.h b/include/ship/audio/SDLAudioPlayer.h
+index eb35908d..366cfa7a 100644
+--- a/include/ship/audio/SDLAudioPlayer.h
++++ b/include/ship/audio/SDLAudioPlayer.h
+@@ -22,5 +22,12 @@ class SDLAudioPlayer final : public AudioPlayer {
+     SDL_AudioDeviceID mDevice = 0;
+     int32_t mNumChannels = 2;
+     std::atomic<bool> mPaused = false;
++#ifdef __IOS__
++    bool mPriming = true;
++    uint32_t mTelemetryFrames = 0;
++    uint32_t mUnderruns = 0;
++    int32_t mMinBuffered = -1;
++    int32_t mMaxBuffered = 0;
++#endif
+ };
+ } // namespace Ship
+diff --git a/src/ship/audio/SDLAudioPlayer.cpp b/src/ship/audio/SDLAudioPlayer.cpp
+index 0a3588a4..3e7933a9 100644
+--- a/src/ship/audio/SDLAudioPlayer.cpp
++++ b/src/ship/audio/SDLAudioPlayer.cpp
+@@ -1,4 +1,5 @@
+ #include "ship/audio/SDLAudioPlayer.h"
++#include <algorithm>
+ #include <spdlog/spdlog.h>
+ 
+ namespace Ship {
+@@ -46,12 +47,23 @@ bool SDLAudioPlayer::DoInit() {
+         return false;
+     }
+ 
+-    SPDLOG_INFO("SDL Audio initialized: {} channels, {} Hz", mNumChannels, this->GetSampleRate());
+-
+-    SDL_PauseAudioDevice(mDevice, 0);
++    SPDLOG_INFO("SDL Audio initialized: {} channels, {} Hz, {} sample device buffer", mNumChannels,
++                this->GetSampleRate(), have.samples);
+ #ifdef __IOS__
++    // Queue-based playback otherwise starts against an empty device. The
++    // first late game/render tick then becomes an audible gap. Hold playback
++    // until the configured safety buffer is present; foreground resumes use
++    // the same path after their intentionally cleared queue.
++    mPriming = true;
++    mTelemetryFrames = 0;
++    mUnderruns = 0;
++    mMinBuffered = -1;
++    mMaxBuffered = 0;
++    SDL_PauseAudioDevice(mDevice, 1);
+     SDL_Log("[BrawlerPad] SDL audio initialized: device=%u channels=%d frequency=%d status=%d", mDevice,
+             mNumChannels, this->GetSampleRate(), SDL_GetAudioDeviceStatus(mDevice));
++#else
++    SDL_PauseAudioDevice(mDevice, 0);
+ #endif
+     return true;
+ }
+@@ -65,16 +77,59 @@ void SDLAudioPlayer::SetPaused(bool paused) {
+     if (mDevice == 0) {
+         return;
+     }
+-    SDL_PauseAudioDevice(mDevice, paused ? 1 : 0);
+     if (paused) {
++        SDL_PauseAudioDevice(mDevice, 1);
+         SDL_ClearQueuedAudio(mDevice);
++#ifdef __IOS__
++        mPriming = true;
++#endif
++        return;
+     }
++#ifdef __IOS__
++    // DoPlay will unpause after rebuilding the safety buffer.
++    SDL_PauseAudioDevice(mDevice, mPriming ? 1 : 0);
++#else
++    SDL_PauseAudioDevice(mDevice, 0);
++#endif
+ }
+ 
+ void SDLAudioPlayer::DoPlay(const uint8_t* buf, size_t len) {
+-    if (!mPaused && Buffered() < 6000) {
+-        // Don't fill the audio buffer too much in case this happens
+-        SDL_QueueAudio(mDevice, buf, len);
++    if (mPaused) {
++        return;
++    }
++
++    int32_t buffered = Buffered();
++    if (buffered >= 6000) {
++        return;
++    }
++
++#ifdef __IOS__
++    if (!mPriming && buffered == 0) {
++        mUnderruns++;
++    }
++    mMinBuffered = (mMinBuffered < 0) ? buffered : std::min(mMinBuffered, buffered);
++    mMaxBuffered = std::max(mMaxBuffered, buffered);
++#endif
++
++    // Don't fill the audio buffer too much in case this happens.
++    SDL_QueueAudio(mDevice, buf, len);
++
++#ifdef __IOS__
++    buffered = Buffered();
++    const int32_t primeTarget = GetDesiredBuffered() + (GetSampleLength() * 2);
++    if (mPriming && buffered >= primeTarget) {
++        mPriming = false;
++        SDL_PauseAudioDevice(mDevice, 0);
++        spdlog::info("iOS audio queue primed: {} samples (target {})", buffered, primeTarget);
++    }
++    if (++mTelemetryFrames == 120) {
++        spdlog::info("iOS audio queue: min={} max={} underruns={} priming={}", mMinBuffered,
++                     mMaxBuffered, mUnderruns, mPriming);
++        mTelemetryFrames = 0;
++        mUnderruns = 0;
++        mMinBuffered = -1;
++        mMaxBuffered = 0;
+     }
++#endif
+ }
+ } // namespace Ship

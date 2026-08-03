@@ -1,0 +1,172 @@
+diff --git a/include/ship/audio/Audio.h b/include/ship/audio/Audio.h
+--- a/include/ship/audio/Audio.h
++++ b/include/ship/audio/Audio.h
+@@ -28,6 +28,11 @@ class Audio {
+     /** Pauses or resumes the active audio backend. */
+     void SetPaused(bool paused);
+ 
++#ifdef __IOS__
++    /** Retries a transient SDL startup failure once UIKit is active. */
++    bool RetryInitialization();
++#endif
++
+   protected:
+     void InitAudioPlayer();
+ 
+@@ -36,5 +41,8 @@ class Audio {
+     AudioBackend mAudioBackend;
+     AudioSettings mAudioSettings;
+     std::shared_ptr<std::vector<AudioBackend>> mAvailableAudioBackends;
++#ifdef __IOS__
++    bool mInitializationRetryPending = false;
++#endif
+ };
+ } // namespace Ship
+diff --git a/src/fast/backends/gfx_sdl2.cpp b/src/fast/backends/gfx_sdl2.cpp
+--- a/src/fast/backends/gfx_sdl2.cpp
++++ b/src/fast/backends/gfx_sdl2.cpp
+@@ -76,6 +76,22 @@ static void SetIOSAudioPaused(bool paused) {
+         context->GetAudio()->SetPaused(paused);
+     }
+ }
++
++static void RetryIOSAudioInitialization() {
++    static Uint32 nextRetryAt = 0;
++    auto context = Ship::Context::GetInstance();
++    if (!context || !context->GetAudio()) {
++        return;
++    }
++
++    Uint32 now = SDL_GetTicks();
++    if (static_cast<Sint32>(now - nextRetryAt) < 0) {
++        return;
++    }
++    if (!context->GetAudio()->RetryInitialization()) {
++        nextRetryAt = now + 500;
++    }
++}
+ #endif
+ 
+ const SDL_Scancode lus_to_sdl_table[] = {
+@@ -702,6 +717,9 @@ void GfxWindowBackendSDL2::HandleSingleEvent(SDL_Event& event) {
+                     }
+                     break;
+                 case SDL_WINDOWEVENT_FOCUS_GAINED: {
++#ifdef __IOS__
++                    RetryIOSAudioInitialization();
++#endif
+                     CALL_EVENT(WindowFocusEvent, true);
+                     break;
+                 }
+@@ -728,6 +746,7 @@ void GfxWindowBackendSDL2::HandleSingleEvent(SDL_Event& event) {
+         case SDL_APP_WILLENTERFOREGROUND:
+             break;
+         case SDL_APP_DIDENTERFOREGROUND:
++            RetryIOSAudioInitialization();
+             SetIOSAudioPaused(false);
+             mIsBackgrounded = false;
+             SPDLOG_INFO("iOS application entered foreground");
+@@ -757,6 +776,12 @@ void GfxWindowBackendSDL2::HandleEvents() {
+         HandleSingleEvent(event);
+     }
+ 
++#ifdef __IOS__
++    if ((SDL_GetWindowFlags(mWnd) & SDL_WINDOW_INPUT_FOCUS) != 0) {
++        RetryIOSAudioInitialization();
++    }
++#endif
++
+     // resync fullscreen state
+ #if defined(__APPLE__) && !defined(__IOS__)
+     auto nextFullscreenState = isNativeMacOSFullscreenActive(mWnd);
+diff --git a/src/ship/audio/Audio.cpp b/src/ship/audio/Audio.cpp
+--- a/src/ship/audio/Audio.cpp
++++ b/src/ship/audio/Audio.cpp
+@@ -14,6 +14,9 @@ Audio::~Audio() {
+ }
+ 
+ void Audio::InitAudioPlayer() {
++#ifdef __IOS__
++    mInitializationRetryPending = false;
++#endif
+     switch (GetCurrentAudioBackend()) {
+ #ifdef _WIN32
+         case AudioBackend::WASAPI:
+@@ -36,6 +39,18 @@ void Audio::InitAudioPlayer() {
+     if (mAudioPlayer && !mAudioPlayer->Init()) {
+         // Failed to initialize system audio player.
+         // Fallback to Null if the native system player does not work.
++#ifdef __IOS__
++        if (mAudioBackend == AudioBackend::SDL) {
++            // UIKit can still be inactive when the first audio device is
++            // opened. Keep SDL selected and retry from the active window
++            // loop instead of permanently saving the silent backend.
++            SPDLOG_WARN("SDL audio is not ready yet; retrying when iOS becomes active");
++            mAudioPlayer = std::make_shared<NullAudioPlayer>(this->mAudioSettings);
++            mAudioPlayer->Init();
++            mInitializationRetryPending = true;
++            return;
++        }
++#endif
+         SetCurrentAudioBackend(AudioBackend::NUL);
+     }
+ }
+@@ -51,7 +66,9 @@ void Audio::Init() {
+     mAvailableAudioBackends->push_back(AudioBackend::COREAUDIO);
+ #endif
+     mAvailableAudioBackends->push_back(AudioBackend::SDL);
++#ifndef __IOS__
+     mAvailableAudioBackends->push_back(AudioBackend::NUL);
++#endif
+ 
+     SetCurrentAudioBackend(Context::GetInstance()->GetConfig()->GetCurrentAudioBackend());
+ }
+@@ -95,4 +112,16 @@ void Audio::SetPaused(bool paused) {
+     }
+ }
+ 
++#ifdef __IOS__
++bool Audio::RetryInitialization() {
++    if (!mInitializationRetryPending) {
++        return true;
++    }
++
++    SPDLOG_INFO("Retrying SDL audio initialization after iOS activation");
++    InitAudioPlayer();
++    return !mInitializationRetryPending;
++}
++#endif
++
+ } // namespace Ship
+diff --git a/src/ship/audio/SDLAudioPlayer.cpp b/src/ship/audio/SDLAudioPlayer.cpp
+--- a/src/ship/audio/SDLAudioPlayer.cpp
++++ b/src/ship/audio/SDLAudioPlayer.cpp
+@@ -49,6 +49,10 @@ bool SDLAudioPlayer::DoInit() {
+     SPDLOG_INFO("SDL Audio initialized: {} channels, {} Hz", mNumChannels, this->GetSampleRate());
+ 
+     SDL_PauseAudioDevice(mDevice, 0);
++#ifdef __IOS__
++    SDL_Log("[BrawlerPad] SDL audio initialized: device=%u channels=%d frequency=%d status=%d", mDevice,
++            mNumChannels, this->GetSampleRate(), SDL_GetAudioDeviceStatus(mDevice));
++#endif
+     return true;
+ }
+ 
+diff --git a/src/ship/config/Config.cpp b/src/ship/config/Config.cpp
+--- a/src/ship/config/Config.cpp
++++ b/src/ship/config/Config.cpp
+@@ -267,7 +267,14 @@ AudioBackend Config::GetCurrentAudioBackend() {
+     }
+ 
+     if (backendName == "null") {
++#ifdef __IOS__
++        // Older BrawlerPad builds persisted Null after a transient
++        // AVAudioSession startup failure. Migrate those devices back to SDL.
++        SetCurrentAudioBackend(AudioBackend::SDL);
++        return AudioBackend::SDL;
++#else
+         return AudioBackend::NUL;
++#endif
+     }
+ 
+     SPDLOG_TRACE("Could not find AudioBackend matching value from config file ({}). Returning default AudioBackend.",

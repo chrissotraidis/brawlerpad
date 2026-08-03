@@ -1,0 +1,21 @@
+diff --git a/port/gui/Menu.cpp b/port/gui/Menu.cpp
+--- a/port/gui/Menu.cpp
++++ b/port/gui/Menu.cpp
+@@ -944,6 +944,17 @@ void Menu::DrawElement() {
+         sidebarWidth = menuSize.x * 0.15f;
+     }
+ 
++    // Keep long section names readable when mobile UI scaling uses the
++    // largest menu font. The old fixed width clipped labels such as
++    // "Control Enhancements" on iPad.
++    float requiredSidebarWidth = sidebarWidth;
++    for (const auto& sidebarLabel : menuEntries.at(headerIndex).sidebarOrder) {
++        requiredSidebarWidth = std::fmaxf(
++            requiredSidebarWidth,
++            ImGui::CalcTextSize(sidebarLabel.c_str()).x + style.FramePadding.x * 2 + style.ItemSpacing.x * 2);
++    }
++    sidebarWidth = std::fminf(requiredSidebarWidth, menuSize.x * 0.4f);
++
+     const char* sidebarCvar = menuEntries.at(headerIndex).sidebarCvar;
+ 
+     std::string sectionIndex = CVarGetString(sidebarCvar, "");

@@ -4,12 +4,12 @@ Updated: 2026-08-03.
 
 ## Current milestone
 
-Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
-reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: a fresh remote clone now reproduces every release build and audit, and
-the branded macOS package plus complete single-contact iPhone and iPad touch VS
-flows are proven. Simultaneous multitouch, physical hardware, and the remaining
-lifecycle/audio work stay explicitly open.
+Milestone 7/7 — native iPhoneOS compilation, strict package auditing, a
+reproducible ROM-free unsigned IPA, and development-signed physical iPhone/iPad
+installation and launch are proven. Runtime acceptance remains partial: archive,
+save, SDL audio, floating touch, iPhone frame pacing, and queue stability pass.
+Hands-on long-play audio, multitouch/reset feel, rotation, physical controllers,
+and real lifecycle/audio-route changes stay explicitly open.
 
 ## Verified
 
@@ -266,21 +266,37 @@ lifecycle/audio work stay explicitly open.
   Two packages from that exact app were byte-identical at IPA SHA-256
   `e81a061c7034ae97d5e431f195b141246bd02d7733ffbe7ad1de0dbcdda2400c`.
   The iPad Pro 13-inch (M5) remained the machine's sole booted simulator.
+- The current development-signed executable SHA-256
+  `c721c192f3d5ef7b8c996e13e140c11fda785e887146d6a2a4cedc677b00415f`
+  passed package and deep-signature verification and installed in place on the
+  physical iPad Pro and wired iPhone 14. The iPhone launched normally; its
+  final 20-second log primed 4,968 samples against a 4,528-sample startup
+  target, reported zero post-start underruns, held roughly 1,760–3,900 queued
+  samples, and settled at about 16.7 ms per frame. The iPad install completed,
+  but its locked screen denied the automated launch request.
+- The current control profile removes Smash 64's unused D-pad and four-way C
+  diamond, consolidates jump into one large target, reserves the left 47
+  percent for a per-contact floating analog stick, and moves all actions to the
+  right so Z/A/B/Jump combinations remain available while moving. A red Reset
+  pill appears only in the game's paused battle state and sends A+B+Z+R as one
+  virtual-controller chord.
 
 ## In progress
 
 - Repeat the proven synthetic lifecycle/audio dispatch with audible,
   OS-generated interruptions and headphone/Bluetooth route changes on physical
   hardware.
-- Complete simultaneous-multitouch acceptance and repeat the simulator flows
-  on physical iPhone and iPad hardware.
-- Audible-output confirmation and physical-controller gameplay remain pending.
+- Complete hands-on simultaneous-multitouch, floating-stick, rotation, and
+  safe-area acceptance on the installed physical iPhone and iPad builds.
+- Confirm the queue-stable build by ear through a long match and exercise the
+  pause-only Reset action. Physical-controller gameplay remains pending;
   Simulator exposes a forwarded MFi `Gamepad`, but the Mac's paired 8BitDo and
-  Xbox controllers are both currently powered off/disconnected.
+  Xbox controllers are currently powered off/disconnected.
 
 ## Not yet claimed
 
-- Physical device testing or the full lifecycle/audio interruption matrix.
+- Complete physical-device usability acceptance or the full lifecycle/audio
+  interruption matrix.
 
 These remain explicitly unverified until their entries in `TESTING.md` have
 captured commands and observable results.

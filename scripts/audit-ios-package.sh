@@ -37,6 +37,9 @@ audit_app() {
         fail "app is not an iPhoneOS product"
     [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = \
         "com.brawlerpad.app" ] || fail "unexpected bundle identifier"
+    [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$app/Info.plist")" = \
+        "AppIcon" ] || fail "compiled app icon metadata is missing"
+    [ -f "$app/Assets.car" ] || fail "compiled app icon asset catalog is missing"
 
     # f3d.o2r is the small, port-authored Fast3D shader archive required by
     # the renderer. It is not ROM-derived game content, and it is the only

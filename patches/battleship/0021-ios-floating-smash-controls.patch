@@ -1,0 +1,423 @@
+diff --git a/port/ios/brawlerpad_touch_controls.mm b/port/ios/brawlerpad_touch_controls.mm
+index 0f2f22e..c728cbe 100644
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -202,6 +202,7 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ @property(nonatomic) CFTimeInterval inputLastUpdateTime;
+ @property(nonatomic) NSUInteger inputGeneration;
+ - (BOOL)tracking;
++- (void)beginInput;
+ - (void)updatePoint:(CGPoint)point;
+ - (void)finishInput;
+ - (void)cancelInput;
+@@ -234,6 +235,14 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     if (![self tracking]) self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+ }
+ - (BOOL)tracking { return self.inputTracking; }
++- (void)beginInput {
++    ++self.inputGeneration;
++    self.inputTracking = YES;
++    self.inputLastUpdateTime = CACurrentMediaTime();
++    self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTX, 0);
++    SetAxis(SDL_CONTROLLER_AXIS_LEFTY, 0);
++}
+ - (void)updatePoint:(CGPoint)point {
+     if (self.layoutEditing) return;
+     CGPoint center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+@@ -256,8 +265,7 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     self.inputLastUpdateTime = CACurrentMediaTime();
+ }
+ - (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
+-    ++self.inputGeneration;
+-    self.inputTracking=YES;
++    [self beginInput];
+     [self updatePoint:[touches.anyObject locationInView:self]];
+ }
+ - (void)touchesMoved:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event { [self updatePoint:[touches.anyObject locationInView:self]]; }
+@@ -312,6 +320,8 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ @property(nonatomic, strong) UISlider* sizeSlider;
+ @property(nonatomic, strong) UIButton* visibilityButton;
+ @property(nonatomic, strong) NSMutableArray<UIGestureRecognizer*>* editGestures;
++@property(nonatomic, strong) UITouch* stickTouch;
++@property(nonatomic) CGPoint stickTouchOrigin;
+ - (void)cancelAllInputs;
+ - (void)beginEditing;
+ - (void)endEditing;
+@@ -325,6 +335,7 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ - (void)layoutEditorPanel;
+ - (void)installEditor;
+ - (void)select:(UIView*)view;
++- (BOOL)isInStickZone:(CGPoint)point;
+ @end
+ 
+ @implementation BrawlerPadTouchOverlay
+@@ -342,23 +353,15 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     self.stick.accessibilityIdentifier = @"stick";
+     BrawlerPadTouchButton* a = [self button:@"A" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_A id:@"a" pill:NO];
+     BrawlerPadTouchButton* b = [self button:@"B" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_B id:@"b" pill:NO];
+-    BrawlerPadTouchButton* z = [self button:@"Z" kind:BPInputTrigger code:SDL_CONTROLLER_AXIS_TRIGGERLEFT id:@"z" pill:NO];
++    BrawlerPadTouchButton* z = [self button:@"Z" kind:BPInputTrigger code:SDL_CONTROLLER_AXIS_TRIGGERLEFT id:@"z" pill:YES];
+     BrawlerPadTouchButton* l = [self button:@"L" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_LEFTSHOULDER id:@"l" pill:YES];
+     BrawlerPadTouchButton* r = [self button:@"R" kind:BPInputTrigger code:SDL_CONTROLLER_AXIS_TRIGGERRIGHT id:@"r" pill:YES];
+     BrawlerPadTouchButton* start = [self button:@"START" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_START id:@"start" pill:YES];
+-    NSArray* d = @[
+-        [self button:@"▲" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_UP id:@"d-up" pill:NO],
+-        [self button:@"▼" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_DOWN id:@"d-down" pill:NO],
+-        [self button:@"◀" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_LEFT id:@"d-left" pill:NO],
+-        [self button:@"▶" kind:BPInputButton code:SDL_CONTROLLER_BUTTON_DPAD_RIGHT id:@"d-right" pill:NO]
+-    ];
+-    NSArray* c = @[
+-        [self button:@"▲" kind:BPInputCDirection code:0 id:@"c-up" pill:NO],
+-        [self button:@"▼" kind:BPInputCDirection code:1 id:@"c-down" pill:NO],
+-        [self button:@"◀" kind:BPInputCDirection code:2 id:@"c-left" pill:NO],
+-        [self button:@"▶" kind:BPInputCDirection code:3 id:@"c-right" pill:NO]
+-    ];
+-    self.buttons = [@[a, b, z, l, r, start] arrayByAddingObjectsFromArray:[d arrayByAddingObjectsFromArray:c]];
++    // Every C button jumps in Smash 64. One generous touch target is both
++    // easier to chord with A/B and more faithful to how the controls are used
++    // than four small, functionally equivalent directions.
++    BrawlerPadTouchButton* jump = [self button:@"JUMP" kind:BPInputCDirection code:0 id:@"jump" pill:NO];
++    self.buttons = @[a, b, z, l, r, start, jump];
+     self.controls = [@[self.stick] arrayByAddingObjectsFromArray:self.buttons];
+     self.centers = [NSMutableDictionary dictionary];
+     self.scales = [NSMutableDictionary dictionary];
+@@ -370,19 +373,62 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ 
+     a.idleColor = [UIColor colorWithRed:0.08 green:0.40 blue:0.90 alpha:0.52];
+     b.idleColor = [UIColor colorWithRed:0.06 green:0.58 blue:0.24 alpha:0.52];
+-    for (BrawlerPadTouchButton* button in c) button.idleColor = [UIColor colorWithRed:0.94 green:0.66 blue:0.08 alpha:0.50];
++    jump.idleColor = [UIColor colorWithRed:0.94 green:0.66 blue:0.08 alpha:0.50];
+     for (BrawlerPadTouchButton* button in self.buttons) button.backgroundColor = button.idleColor;
+-    NSArray<NSString*>* dLabels = @[@"D-pad Up", @"D-pad Down", @"D-pad Left", @"D-pad Right"];
+-    NSArray<NSString*>* cLabels = @[@"C Up", @"C Down", @"C Left", @"C Right"];
+-    for (NSUInteger i = 0; i < d.count; ++i) ((BrawlerPadTouchButton*)d[i]).accessibilityLabel = dLabels[i];
+-    for (NSUInteger i = 0; i < c.count; ++i) ((BrawlerPadTouchButton*)c[i]).accessibilityLabel = cLabels[i];
++    jump.accessibilityLabel = @"Jump (C button)";
+     [self installEditor];
+     return self;
+ }
+ - (UIView*)hitTest:(CGPoint)point withEvent:(UIEvent*)event {
+     UIView* hit = [super hitTest:point withEvent:event];
++    if (!self.layoutEditing && (hit == self || hit == self.stick) && [self isInStickZone:point]) return self;
+     return hit == self ? nil : hit;
+ }
++- (BOOL)isInStickZone:(CGPoint)point {
++    return point.x >= self.safeAreaInsets.left &&
++           point.x <= CGRectGetWidth(self.bounds) * .47 &&
++           point.y >= self.safeAreaInsets.top &&
++           point.y <= CGRectGetHeight(self.bounds) - self.safeAreaInsets.bottom;
++}
++- (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
++    if (self.layoutEditing || self.stickTouch != nil) return;
++    for (UITouch* touch in touches) {
++        CGPoint point = [touch locationInView:self];
++        if (![self isInStickZone:point]) continue;
++        self.stickTouch = touch;
++        self.stickTouchOrigin = point;
++        CGFloat half = MIN(CGRectGetWidth(self.stick.bounds), CGRectGetHeight(self.stick.bounds)) * .5;
++        UIEdgeInsets safe = self.safeAreaInsets;
++        CGFloat x = std::clamp(point.x, safe.left + half, CGRectGetWidth(self.bounds) * .47 - half);
++        CGFloat y = std::clamp(point.y, safe.top + half,
++                               CGRectGetHeight(self.bounds) - safe.bottom - half);
++        self.stick.center = CGPointMake(x, y);
++        self.stick.hidden = NO;
++        self.stick.alpha = sOpacity.load();
++        [self.stick beginInput];
++        break;
++    }
++}
++- (void)touchesMoved:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
++    if (self.stickTouch == nil || ![touches containsObject:self.stickTouch]) return;
++    CGPoint point = [self.stickTouch locationInView:self];
++    CGPoint center = CGPointMake(CGRectGetMidX(self.stick.bounds), CGRectGetMidY(self.stick.bounds));
++    CGPoint delta = CGPointMake(point.x - self.stickTouchOrigin.x,
++                                point.y - self.stickTouchOrigin.y);
++    [self.stick updatePoint:CGPointMake(center.x + delta.x, center.y + delta.y)];
++}
++- (void)finishStickTouch:(BOOL)cancelled {
++    if (self.stickTouch == nil) return;
++    self.stickTouch = nil;
++    if (cancelled) [self.stick cancelInput]; else [self.stick finishInput];
++    self.stick.hidden = YES;
++}
++- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
++    if (self.stickTouch != nil && [touches containsObject:self.stickTouch]) [self finishStickTouch:NO];
++}
++- (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
++    if (self.stickTouch != nil && [touches containsObject:self.stickTouch]) [self finishStickTouch:YES];
++}
+ - (UIView*)control:(NSString*)identifier {
+     for (UIView* view in self.controls) if ([view.accessibilityIdentifier isEqualToString:identifier]) return view;
+     return nil;
+@@ -395,8 +441,8 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ - (BOOL)isCompact { return MIN(CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds)) < 600.0; }
+ - (BOOL)isPortrait { return CGRectGetWidth(self.bounds) < CGRectGetHeight(self.bounds); }
+ - (NSString*)profileName {
+-    if ([self isCompact]) return @"phone-v5";
+-    return [self isPortrait] ? @"tablet-portrait-v1" : @"tablet-v4";
++    if ([self isCompact]) return @"phone-v6";
++    return [self isPortrait] ? @"tablet-portrait-v2" : @"tablet-v5";
+ }
+ - (NSString*)storageKey { return [@"BrawlerPad.TouchLayout." stringByAppendingString:self.profile ?: [self profileName]]; }
+ - (void)loadProfile {
+@@ -413,177 +459,47 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     UIEdgeInsets safe = self.safeAreaInsets;
+     CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
+     BOOL compact = [self isCompact];
+-    if (compact) {
+-        // Phone V5 uses the normalized geometry promoted from
+-        // HarkinianPad's physical-iPhone acceptance pass. Keep the shoulder
+-        // rails at the outer top edges, D-pad/Z/stick under the left thumb,
+-        // and C/face buttons under the right thumb. This avoids the crowded
+-        // right rail and vertical button stacks from the V4 layout.
+-        CGFloat left = safe.left + 10.0;
+-        CGFloat right = safe.right + 10.0;
+-        CGFloat top = safe.top + 36.0;
+-        CGFloat shoulderHeight = 44.0;
+-        CGFloat shoulderWidth = 76.0;
+-        [self setFrameFor:@"l"
+-                   center:CGPointMake(left + shoulderWidth * .5, top + shoulderHeight * .5)
+-                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
+-        [self setFrameFor:@"r" center:CGPointMake(w - right - shoulderWidth * .5, top + shoulderHeight * .5)
+-                     size:CGSizeMake(shoulderWidth, shoulderHeight)];
+-        [self setFrameFor:@"start"
+-                   center:CGPointMake(w - right - shoulderWidth - 8.0 - shoulderHeight * .5,
+-                                      top + shoulderHeight * .5)
+-                     size:CGSizeMake(shoulderHeight, shoulderHeight)];
+-
+-        CGFloat dSize = 44.0, dRadius = 38.0;
+-        CGPoint dc = CGPointMake(left + 54.0, top + shoulderHeight + 80.0);
+-        [self setFrameFor:@"d-up" center:CGPointMake(dc.x, dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-down" center:CGPointMake(dc.x, dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius, dc.y) size:CGSizeMake(dSize,dSize)];
+-
+-        CGFloat stickSize = 116.0;
+-        [self setFrameFor:@"stick"
+-                   center:CGPointMake(w * .214455, h * .722222)
+-                     size:CGSizeMake(stickSize, stickSize)];
+-        CGFloat faceSize = 52.0;
+-        [self setFrameFor:@"z" center:CGPointMake(w * .242496, h * .499145)
+-                     size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"a" center:CGPointMake(w * .876382, h * .737607)
+-                     size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"b" center:CGPointMake(w * .805687, h * .664957)
+-                     size:CGSizeMake(faceSize,faceSize)];
+-        CGFloat cSize = 40.0;
+-        [self setFrameFor:@"c-up" center:CGPointMake(w * .866904, h * .398291) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-down" center:CGPointMake(w * .866509, h * .570085) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-left" center:CGPointMake(w * .823855, h * .485470) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-right" center:CGPointMake(w * .911137, h * .486325) size:CGSizeMake(cSize,cSize)];
+-        [self control:@"d-down"].center = CGPointMake(w * .130727, h * .501709);
+-        for (BrawlerPadTouchButton* button in self.buttons)
+-            button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
+-        [self control:@"start"].accessibilityLabel = @"Start";
+-        return;
+-    }
+-
+-    if ([self isPortrait]) {
+-        // A landscape-only game can briefly receive portrait or tall
+-        // Stage-Manager bounds during rotation/restoration. Give that shape a
+-        // real layout instead of squeezing the landscape rails together.
+-        CGFloat scale = std::clamp(w / 1024.0, .78, 1.10);
+-        CGFloat edge = 18.0 * scale;
+-        CGFloat left = safe.left + edge;
+-        CGFloat right = safe.right + edge;
+-        CGFloat usableBottom = h - safe.bottom - edge;
+-
+-        CGFloat pillHeight = 50.0 * scale;
+-        CGFloat shoulderWidth = 96.0 * scale;
+-        CGFloat shoulderY = safe.top + edge + pillHeight * .5;
+-        [self setFrameFor:@"l" center:CGPointMake(left + shoulderWidth * .5, shoulderY)
+-                     size:CGSizeMake(shoulderWidth,pillHeight)];
+-        [self setFrameFor:@"r" center:CGPointMake(w - right - shoulderWidth * .5, shoulderY)
+-                     size:CGSizeMake(shoulderWidth,pillHeight)];
+-        CGFloat startWidth = 78.0 * scale;
+-        [self setFrameFor:@"start"
+-                   center:CGPointMake(w - right - shoulderWidth - 12.0 * scale - startWidth * .5,
+-                                      shoulderY)
+-                     size:CGSizeMake(startWidth,pillHeight)];
+-
+-        CGFloat stickSize = 154.0 * scale;
+-        CGPoint stickCenter = CGPointMake(w * .205, usableBottom - stickSize * .5);
+-        [self setFrameFor:@"stick" center:stickCenter size:CGSizeMake(stickSize,stickSize)];
+-
+-        CGFloat dSize = 50.0 * scale, dRadius = 50.0 * scale;
+-        CGPoint dc = CGPointMake(w * .175,
+-                                 stickCenter.y - stickSize * .5 - 22.0 * scale -
+-                                     dRadius - dSize * .5);
+-        [self setFrameFor:@"d-up" center:CGPointMake(dc.x,dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-down" center:CGPointMake(dc.x,dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
+-        [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
+-
+-        CGFloat cSize = 46.0 * scale, cRadius = 48.0 * scale;
+-        CGPoint cc = CGPointMake(w * .845, usableBottom - cRadius - cSize * .5);
+-        [self setFrameFor:@"c-up" center:CGPointMake(cc.x,cc.y-cRadius) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-down" center:CGPointMake(cc.x,cc.y+cRadius) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-left" center:CGPointMake(cc.x-cRadius,cc.y) size:CGSizeMake(cSize,cSize)];
+-        [self setFrameFor:@"c-right" center:CGPointMake(cc.x+cRadius,cc.y) size:CGSizeMake(cSize,cSize)];
+-
+-        CGFloat faceSize = 66.0 * scale;
+-        CGFloat cTop = cc.y - cRadius - cSize * .5;
+-        CGFloat faceBottom = cTop - 16.0 * scale;
+-        CGPoint aCenter = CGPointMake(w * .855, faceBottom - faceSize * .5);
+-        [self setFrameFor:@"a" center:aCenter size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"b"
+-                   center:CGPointMake(aCenter.x - faceSize - 14.0 * scale,
+-                                      aCenter.y - 10.0 * scale)
+-                     size:CGSizeMake(faceSize,faceSize)];
+-        [self setFrameFor:@"z"
+-                   center:CGPointMake(aCenter.x, aCenter.y - faceSize - 14.0 * scale)
+-                     size:CGSizeMake(faceSize,faceSize)];
+-        CGFloat labelSize = 16.0 * scale;
+-        for (BrawlerPadTouchButton* button in self.buttons)
+-            button.titleLabel.font = [UIFont systemFontOfSize:labelSize weight:UIFontWeightSemibold];
+-        return;
+-    }
+-
+-    // Tablet V4 restores HarkinianPad's accepted physical-iPad grip split.
+-    // Z belongs between the left D-pad and stick, leaving A/B and the C
+-    // diamond as two spacious right-thumb groups instead of one dense stack.
+-    CGFloat scale = std::clamp(h / 834.0, .78, 1.12);
+-    CGFloat edge = 18.0 * scale;
+-    CGFloat right = safe.right + edge;
+-    CGFloat usableWidth = w - safe.left - safe.right;
+-    CGFloat railWidth = MIN(250.0 * scale, usableWidth * .22);
+-    CGFloat leftCenter = safe.left + railWidth * .5;
+-    CGFloat middleCenterY = h * .60;
+-
+-    CGFloat dSize = 52.0 * scale, dRadius = 48.0 * scale;
+-    CGPoint dc = CGPointMake(leftCenter - 30.0 * scale, middleCenterY + 5.0 * scale);
+-    [self setFrameFor:@"d-up" center:CGPointMake(dc.x,dc.y-dRadius) size:CGSizeMake(dSize,dSize)];
+-    [self setFrameFor:@"d-down" center:CGPointMake(dc.x,dc.y+dRadius) size:CGSizeMake(dSize,dSize)];
+-    [self setFrameFor:@"d-left" center:CGPointMake(dc.x-dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
+-    [self setFrameFor:@"d-right" center:CGPointMake(dc.x+dRadius,dc.y) size:CGSizeMake(dSize,dSize)];
+-
+-    CGFloat stickSize = 150.0 * scale;
+-    [self setFrameFor:@"stick" center:CGPointMake(w * .164363, h * .745313)
+-                 size:CGSizeMake(stickSize,stickSize)];
+-    CGFloat faceSize = 66.0 * scale;
+-    CGPoint zCenter = CGPointMake(w * .193089, h * .612859);
+-    CGPoint aCenter = CGPointMake(w * .893309, h * .693020);
+-    CGPoint bCenter = CGPointMake(w * .826029, h * .635117);
+-    [self setFrameFor:@"a" center:aCenter size:CGSizeMake(faceSize,faceSize)];
+-    [self setFrameFor:@"b" center:bCenter size:CGSizeMake(faceSize,faceSize)];
+-    [self setFrameFor:@"z" center:zCenter size:CGSizeMake(faceSize,faceSize)];
+-
+-    CGFloat cSize = 46.0 * scale;
+-    [self setFrameFor:@"c-up" center:CGPointMake(w * .903338, h * .805484)
+-                 size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-down" center:CGPointMake(w * .902240, h * .905152)
+-                 size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-left" center:CGPointMake(w * .856515, h * .853922)
+-                 size:CGSizeMake(cSize,cSize)];
+-    [self setFrameFor:@"c-right" center:CGPointMake(w * .948331, h * .852945)
+-                 size:CGSizeMake(cSize,cSize)];
+-
+-    CGFloat pillHeight = 54.0 * scale;
+-    CGFloat shoulderWidth = 106.0 * scale;
+-    CGFloat shoulderGap = 12.0 * scale;
+-    CGFloat gripTopY = MAX(safe.top + edge, h * .38);
+-    CGFloat rowY = gripTopY + 45.0 * scale;
+-    [self setFrameFor:@"r"
+-               center:CGPointMake(w - right - shoulderWidth * .5, rowY + pillHeight * .5)
+-                 size:CGSizeMake(shoulderWidth,pillHeight)];
+-    [self setFrameFor:@"l"
+-               center:CGPointMake(w - right - shoulderWidth * .5,
+-                                  rowY + pillHeight * 1.5 + shoulderGap)
+-                 size:CGSizeMake(shoulderWidth,pillHeight)];
+-    CGFloat startWidth = 88.0 * scale;
+-    [self setFrameFor:@"start"
+-               center:CGPointMake(w - right - shoulderWidth - shoulderGap - startWidth * .5,
+-                                  rowY + pillHeight * .5)
+-                 size:CGSizeMake(startWidth,pillHeight)];
+-    CGFloat labelSize = 17.0 * scale;
++    CGFloat scale = compact ? std::clamp(h / 390.0, .86, 1.15)
++                            : ([self isPortrait] ? std::clamp(w / 1024.0, .78, 1.08)
++                                                 : std::clamp(h / 834.0, .78, 1.12));
++
++    // The left 47 percent is an unobstructed floating-stick zone. This frame
++    // is only the editor preview; during play the stick appears under the
++    // first left-side finger and vanishes when that finger lifts.
++    CGFloat stickSize = (compact ? 126.0 : 176.0) * scale;
++    [self setFrameFor:@"stick"
++               center:CGPointMake(safe.left + stickSize * .62,
++                                  h - safe.bottom - stickSize * .62)
++                 size:CGSizeMake(stickSize, stickSize)];
++
++    // Keep every action on the right so movement can remain held while a
++    // second finger shields, attacks, grabs, or jumps.
++    CGFloat faceSize = (compact ? 54.0 : 72.0) * scale;
++    CGFloat jumpSize = (compact ? 58.0 : 74.0) * scale;
++    CGFloat pillHeight = (compact ? 44.0 : 54.0) * scale;
++    CGFloat shoulderWidth = (compact ? 72.0 : 96.0) * scale;
++    CGFloat startWidth = (compact ? 78.0 : 88.0) * scale;
++    CGFloat zWidth = (compact ? 86.0 : 110.0) * scale;
++
++    [self setFrameFor:@"r" center:CGPointMake(w * .92, h * .44)
++                 size:CGSizeMake(shoulderWidth, pillHeight)];
++    [self setFrameFor:@"l" center:CGPointMake(w * .81, h * .44)
++                 size:CGSizeMake(shoulderWidth, pillHeight)];
++    [self setFrameFor:@"start" center:CGPointMake(w * .69, h * .44)
++                 size:CGSizeMake(startWidth, pillHeight)];
++    [self setFrameFor:@"z" center:CGPointMake(w * .92, h * .55)
++                 size:CGSizeMake(zWidth, pillHeight)];
++    [self setFrameFor:@"b" center:CGPointMake(w * .81, h * .64)
++                 size:CGSizeMake(faceSize, faceSize)];
++    [self setFrameFor:@"a" center:CGPointMake(w * .91, h * .72)
++                 size:CGSizeMake(faceSize, faceSize)];
++    [self setFrameFor:@"jump" center:CGPointMake(w * .80, h * .80)
++                 size:CGSizeMake(jumpSize, jumpSize)];
++
++    CGFloat labelSize = (compact ? 14.0 : 17.0) * scale;
+     for (BrawlerPadTouchButton* button in self.buttons)
+         button.titleLabel.font = [UIFont systemFontOfSize:labelSize weight:UIFontWeightSemibold];
++    [self control:@"start"].accessibilityLabel = @"Start";
+ }
+ - (void)clampControl:(UIView*)view {
+     UIEdgeInsets s = self.safeAreaInsets;
+@@ -594,6 +510,8 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ - (void)layoutSubviews {
+     [super layoutSubviews];
+     [self loadProfile];
++    BOOL preserveFloatingStick = [self.stick tracking];
++    CGPoint floatingStickCenter = self.stick.center;
+     [self layoutDefaults];
+     [self.defaultSizes removeAllObjects];
+     CGFloat w = CGRectGetWidth(self.bounds), h = CGRectGetHeight(self.bounds);
+@@ -607,13 +525,17 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+         if (p.count == 2) view.center = CGPointMake(p[0].doubleValue*w,p[1].doubleValue*h);
+         [self clampControl:view];
+         BOOL hidden = [self.hiddenControls containsObject:key];
+-        view.hidden = self.layoutEditing ? NO : hidden;
++        view.hidden = self.layoutEditing ? NO : (view == self.stick ? !preserveFloatingStick : hidden);
+         view.alpha = self.layoutEditing ? (hidden ? .28 : 1.0) : sOpacity.load();
+         view.layer.shadowColor = [UIColor colorWithRed:1 green:.78 blue:.16 alpha:1].CGColor;
+         view.layer.shadowOpacity = self.layoutEditing && view == self.selectedControl ? 1 : 0;
+         view.layer.shadowRadius = 8;
+         view.layer.shadowOffset = CGSizeZero;
+     }
++    if (preserveFloatingStick) {
++        self.stick.center = floatingStickCenter;
++        [self clampControl:self.stick];
++    }
+     [self layoutEditorPanel];
+     [self bringSubviewToFront:self.editorPanel];
+ }
+@@ -680,7 +602,12 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+     [self.centers removeAllObjects]; [self.scales removeAllObjects]; [self.hiddenControls removeAllObjects];
+     [NSUserDefaults.standardUserDefaults removeObjectForKey:[self storageKey]]; [self setNeedsLayout]; [self select:[self control:@"a"]];
+ }
+-- (void)cancelAllInputs { [self.stick cancelInput]; for (BrawlerPadTouchButton* b in self.buttons) [b cancelInput]; }
++- (void)cancelAllInputs {
++    self.stickTouch = nil;
++    [self.stick cancelInput];
++    self.stick.hidden = YES;
++    for (BrawlerPadTouchButton* b in self.buttons) [b cancelInput];
++}
+ - (void)beginEditing {
+     if (self.layoutEditing) return; [self cancelAllInputs]; self.layoutEditing=YES; self.editorPanel.hidden=NO;
+     self.stick.layoutEditing=YES; for (BrawlerPadTouchButton* b in self.buttons) b.layoutEditing=YES; for (UIGestureRecognizer* g in self.editGestures) g.enabled=YES;
+
