@@ -58,11 +58,10 @@ or submitting to an invalid drawable.
 ## Storage model
 
 - App bundle: executable and ROM-free, redistributable port resources only.
-- Application Support: extracted `BattleShip.o2r`, config, saves, controller
+- Application Support: extracted `BrawlerPad.o2r`, config, saves, controller
   mappings, and touch layouts.
 - Documents/import area: user-visible ROM handoff where required.
 - Caches: recreatable shader/texture caches.
 - Temporary: security-scoped import copies and extraction staging.
 
 No absolute developer path is persisted into configuration or packages.
-

@@ -15,6 +15,24 @@ observable runtime result. Compilation alone is not a pass.
 | Full versus flow | character select through results and return | Match and visible results pass; mapped return input pending |
 | Save/relaunch | save file, clean exit, restored state | Save/update, clean exit, and relaunch pass; content-level persistence check pending |
 
+### Branded macOS package proof
+
+The 2026-08-02 branded build produced a 35,372 KiB arm64
+`BrawlerPad.app` and a 12,792 KiB `BrawlerPad.dmg`. The bundle identifier is
+`com.brawlerpad.app.macos`; its data directory, generated archive, and config
+identity are BrawlerPad rather than BattleShip. The app passed strict deep
+ad-hoc signature verification, portable-load-command inspection, and the
+recursive ROM/archive/save/config/log/credential/personal-path audit. Its only
+O2R is the bounded Fast3D shader archive, and its package includes the
+rights/dependency manifests and discovered notices.
+
+A fresh first launch was inspected visibly through macOS accessibility. The
+Metal window showed a fully branded BrawlerPad ROM setup wizard without any
+legacy BattleShip copy. Accepted SHA-256 values are executable
+`31a6677f0eb867c1dfc80e74ed478af62c492242e6fec4749dfe12ce59236f33`,
+`f3d.o2r` `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`,
+and DMG `a20177a5324f62865271ee3fcb5c46220892e2cfeb61428f48b22075f954e273`.
+
 ### Deterministic match proof
 
 Compile `tools/generate-baseline-replay.c` as documented in `BUILDING.md`, then
@@ -85,6 +103,19 @@ frames; the Simulator visibly rendered the game through Metal.
 The no-change Release build completed in 13.05 seconds and invoked no compiler
 or linker steps. This verifies that generated relocation, credits, and shader
 artifacts are dependency-driven instead of forcing a full rebuild.
+
+The later branded replay caught a simulator-only launch regression: applying
+the device proof's deterministic `-no_uuid` link option to Simulator produced
+a Mach-O that dyld rejected for a missing `LC_UUID`. The option is now limited
+to generic iPhoneOS builds. The rebuilt Simulator executable retains UUID
+`58B7AF12-FC8A-3BD0-AA6F-1783A8A3AF1F` and launched successfully on the sole
+booted iPhone 17 Pro.
+
+From the native Files picker, that branded build selected the supported ROM,
+created a 12,114,884-byte `BrawlerPad.o2r` in 5 seconds, deleted the temporary
+`brawlerpad-import-*` copy, and visibly booted native Metal gameplay. It also
+created `BrawlerPad.cfg.json`; no legacy BattleShip runtime name appeared in
+the fresh branded flow.
 
 ### iPad first-run proof
 
@@ -192,9 +223,9 @@ or a shader archive over 1 MiB.
 
 Two independently created IPAs were byte-identical. The accepted unsigned
 `BrawlerPad-0.1.0-preview.1-unsigned.ipa` is 3.4 MiB with SHA-256
-`2b688a5eec3ce8f1715a05585f76a498ccbb7670f45fd4b15f068fa40ba4f291`;
+`70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`;
 the contained executable has SHA-256
-`669d1c148985639d25d1cb884a82bf7b05671595c353c6e2e3b24dd1db8c138f`.
+`e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`.
 The IPA includes 28 license/notice files from pinned sources and fetched build
 dependencies. Negative fixtures proved rejection of injected `.z64` data,
 `_CodeSignature`, and an embedded personal path.
@@ -206,12 +237,12 @@ source and build prefixes to stable `BattleShip/` and `BrawlerPadBuild/`
 labels; the corrected scanner passes the rebuilt binary without a waiver.
 
 A fresh local Git clone then fetched every official upstream source at the
-recorded pin and replayed all patches. Its 11 BattleShip, 13 libultraship, and
-1 decomp modified files matched the working reference byte-for-byte. The clean
-iPhoneOS build passed the strict audit without any ROM present. Fixed-prefix
-compilation, a sorted fixed-timestamp shader ZIP, and omission of the linker's
-random `LC_UUID` made the clean and primary executables identical at the hash
-above; `f3d.o2r` was also identical at SHA-256
+recorded pin and replayed the complete ordered BattleShip, libultraship,
+decomp, and Torch patch series. Two consecutive source-bootstrap runs were
+idempotent. The clean iPhoneOS build passed the strict audit without any ROM
+present. Fixed-prefix compilation, a sorted fixed-timestamp shader ZIP, and
+omission of the device linker's random `LC_UUID` made the clean and primary
+executables identical at the hash above; `f3d.o2r` was also identical at SHA-256
 `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 Packaging each independently produced byte-identical IPAs at the recorded hash.
 

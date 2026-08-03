@@ -214,3 +214,32 @@
   without altering or reapplying the ordered source delta. A second brand-new
   repository clone also applied the full series on its first invocation and
   recognized every patch on its second.
+
+## 2026-08-02 — branded Apple packages and fresh release replay
+
+- Added a build-time BrawlerPad identity layer that brands the executable,
+  bundle, archive, configuration, storage directory, first-run UI, and stale
+  archive recovery without renaming the pinned upstream repository.
+- Built a 35,372 KiB arm64 `BrawlerPad.app` and 12,792 KiB
+  `BrawlerPad.dmg`. The `com.brawlerpad.app.macos` bundle passed strict deep
+  ad-hoc signing, portable-load-command, ROM/archive/save/config/log,
+  credential, personal-path, rights, and dependency audits. A visible fresh
+  Metal launch showed the fully branded first-run wizard.
+- Rebuilt the branded simulator app. A launch probe caught that the device
+  proof's `-no_uuid` option had leaked into Simulator and produced a dyld
+  rejection. Limited the option to generic iPhoneOS builds, retained simulator
+  UUID `58B7AF12-FC8A-3BD0-AA6F-1783A8A3AF1F`, and verified launch on the sole
+  booted iPhone.
+- Repeated Files import in the branded app. Linked Torch generated a
+  12,114,884-byte `BrawlerPad.o2r` in 5 seconds, the temporary import was
+  removed, `BrawlerPad.cfg.json` was created, and Metal gameplay rendered.
+- Built and audited the clean branded device app and deterministic unsigned
+  IPA. The executable SHA-256 is
+  `e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`;
+  `f3d.o2r` is
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`;
+  the IPA is
+  `70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`.
+- Replayed every ordered BattleShip, libultraship, decomp, and Torch patch in a
+  fresh wrapper clone, verified a second idempotent bootstrap, rebuilt without
+  a ROM, and reproduced the executable, shader archive, and IPA byte-for-byte.

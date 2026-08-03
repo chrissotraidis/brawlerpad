@@ -74,6 +74,28 @@ archive, save, credential, profile, certificate, or private key. It is not a
 release candidate: binary strings still expose the maintainer's absolute
 source/build path, which the final package audit must reject.
 
+## Build the branded BrawlerPad macOS package
+
+```sh
+scripts/build-macos-app.sh
+```
+
+This builds, packages, and audits ignored release artifacts at
+`ref/BattleShip/dist/BrawlerPad.app` and
+`ref/BattleShip/dist/BrawlerPad.dmg`. The app uses bundle identifier
+`com.brawlerpad.app.macos`, stores generated data under
+`~/Library/Application Support/BrawlerPad`, and names its generated archive
+and configuration `BrawlerPad.o2r` and `BrawlerPad.cfg.json`. It is ad-hoc
+signed and contains the rights/dependency manifests and discovered notices.
+
+Run the audit independently with:
+
+```sh
+scripts/audit-macos-package.sh \
+  ref/BattleShip/dist/BrawlerPad.app \
+  ref/BattleShip/dist/BrawlerPad.dmg
+```
+
 ## Generate the deterministic baseline replay
 
 The replay fixture is generated outside Git and contains only synthetic input
@@ -99,7 +121,7 @@ scripts/build-ios-simulator.sh
 
 The script configures CMake's Xcode generator with the pinned iOS toolchain,
 builds an unsigned Release app, verifies the Files/controller plist features,
-and rejects any bundled ROM or playable `BattleShip.o2r`. Its output is:
+and rejects any bundled ROM or playable generated game archive. Its output is:
 
 ```text
 ref/BattleShip/build-ios-sim/Release-iphonesimulator/BrawlerPad.app
@@ -151,12 +173,12 @@ rights and dependency manifests, and license/notice files discovered in both
 the pinned source tree and the selected build's fetched dependencies. It
 normalizes archive timestamps and ordering, then audits the app and IPA. The
 same audited input must produce identical IPA bytes on repeated packaging.
-The iOS compile maps checkout/build prefixes to stable labels, the renderer
-shader archive uses sorted entries and fixed timestamps, and the unsigned
-proof link omits the otherwise-random Mach-O UUID. Together these make the
-app executable and IPA reproducible across different checkout roots on the
-same pinned toolchain, at the cost of UUID-based crash-symbol matching for
-this unsigned proof artifact.
+The iOS compile maps checkout/build prefixes to stable labels and the renderer
+shader archive uses sorted entries and fixed timestamps. The unsigned device
+proof link omits its otherwise-random Mach-O UUID; simulator builds retain the
+required `LC_UUID`. Together these make the device executable and IPA
+reproducible across different checkout roots on the same pinned toolchain, at
+the cost of UUID-based crash-symbol matching for the unsigned device proof.
 
 Run either audit explicitly with:
 
@@ -170,7 +192,7 @@ The unsigned IPA is a build and distribution-boundary proof, not an artifact
 that installs unmodified on a standard device. Re-sign it with your own Apple
 identity and provisioning profile outside the repository.
 
-Never place a ROM, playable `BattleShip.o2r`, save, certificate, or profile in
+Never place a ROM, playable `BrawlerPad.o2r`, save, certificate, or profile in
 an app source/resource group. `f3d.o2r` is the sole allowed O2R: the audit
 requires it to be at most 1 MiB and contain only known renderer-shader paths and
 extensions. Run `scripts/check-repo-safety.sh` before every commit or package

@@ -31,11 +31,13 @@ also passed an iPhone Home/resume cycle with a separately accepted,
 non-overlapping phone layout. A native arm64 iPhoneOS build and reproducible
 unsigned proof IPA now pass strict ROM/save/signing/personal-data audits. The
 bundle contains no ROM or generated playable archive; its only `.o2r` is the
-small renderer-shader archive required by Fast3D.
+small renderer-shader archive required by Fast3D. A branded arm64
+`BrawlerPad.app` and DMG now also build for macOS, carry the BrawlerPad bundle,
+runtime, archive, and configuration identity, pass deep ad-hoc signature and
+ROM/privacy audits, and show a fully branded ROM-free first-run wizard.
 
 The remaining touch gameplay matrix, extended lifecycle stress, real audio
-interruption/route testing, physical-device testing, and native BrawlerPad
-macOS packaging remain in progress. See
+interruption/route testing, and physical-device testing remain in progress. See
 [current status](docs/STATUS.md) and the [implementation plan](docs/PLAN.md)
 for exact evidence and remaining work.
 
@@ -70,6 +72,17 @@ scripts/build-macos-baseline.sh /absolute/path/to/your/rom.n64
 The ROM is hash-checked and linked only into the ignored BattleShip research
 checkout. It is never copied into this repository's tracked project or an app
 package. Full details are in [docs/BUILDING.md](docs/BUILDING.md).
+
+Build and audit the branded, ROM-free macOS package with:
+
+```sh
+scripts/build-macos-app.sh
+```
+
+This produces ignored `BrawlerPad.app` and `BrawlerPad.dmg` artifacts under
+`ref/BattleShip/dist/`. The app is ad-hoc signed, uses bundle identifier
+`com.brawlerpad.app.macos`, and prompts for a supported ROM on first launch;
+no ROM or playable generated archive is bundled.
 
 ## iPhone and iPad builds
 

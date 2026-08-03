@@ -6,8 +6,8 @@ Updated: 2026-08-02.
 
 Milestone 7/7 — native iPhoneOS compilation, strict package auditing, and a
 reproducible ROM-free unsigned IPA are proven. Runtime acceptance is still
-partial: the remaining touch gameplay, hardware, lifecycle/audio, and
-BrawlerPad macOS package work stays explicitly open.
+partial: branded macOS app/DMG packaging is proven, while the remaining touch
+gameplay, hardware, and lifecycle/audio work stays explicitly open.
 
 ## Verified
 
@@ -38,6 +38,12 @@ BrawlerPad macOS package work stays explicitly open.
 - The packaged app was inspected visibly through the macOS accessibility
   surface: first-run setup, Nintendo 64/opening scenes, How to Play, character
   select, and live Dream Land combat rendered correctly in its Metal window.
+- The branded packaging workflow produced a 35,372 KiB arm64
+  `BrawlerPad.app` and 12,792 KiB DMG with bundle identifier
+  `com.brawlerpad.app.macos`, BrawlerPad runtime/storage/archive/config names,
+  portable load commands, deep ad-hoc signing, rights/notices, and no ROM,
+  playable archive, save, credentials, or personal paths. A fresh visible
+  launch showed a fully branded Metal first-run wizard.
 - A ROM-free synthetic replay completed a one-minute Mario-versus-level-9-Fox
   match. BattleShip verified all 3,600 frames with rolling checksum
   `0xC47FF9C5`, entered the VS results scene, continued frames, and exited
@@ -65,6 +71,12 @@ BrawlerPad macOS package work stays explicitly open.
   registered controller input, mounted the generated archive, and visibly
   rendered the native game through Metal. The tested attract sequence reached
   a fully rendered Yoshi scene.
+- A later branded simulator replay caught and fixed a missing-`LC_UUID` launch
+  regression by restricting deterministic no-UUID linking to device builds.
+  The rebuilt simulator executable retains UUID
+  `58B7AF12-FC8A-3BD0-AA6F-1783A8A3AF1F`, imported the supported ROM through
+  Files, produced a 12,114,884-byte `BrawlerPad.o2r` in 5 seconds, removed its
+  temporary import, and visibly booted Metal gameplay.
 - The finished simulator bundle is 9.7 MiB, arm64, has Files sharing/open-in-
   place and indirect controller input enabled, and contains no ROM or playable
   archive. A no-change Release rebuild succeeds in 13 seconds with no source
@@ -116,7 +128,7 @@ BrawlerPad macOS package work stays explicitly open.
   and signing material. Its sole O2R is a bounded, entry-validated 21 KiB
   Fast3D shader archive.
 - Two packages from the same audited app produced identical bytes. The 3.4 MiB
-  unsigned IPA has SHA-256 `2b688a5e...a4f291`, embeds 28 actual license/notice
+  unsigned IPA has SHA-256 `70f57562...f367`, embeds 28 actual license/notice
   files plus the rights/dependency manifests, and passed ZIP traversal,
   extraction, executable-identity, and recursive app audits. Injected ROM,
   signature, and personal-path fixtures were all rejected.
@@ -129,6 +141,12 @@ BrawlerPad macOS package work stays explicitly open.
   Stable path mapping, deterministic shader archiving, and a reproducible
   device link made its executable, shader archive, and final IPA byte-identical
   to independently produced artifacts from the primary checkout.
+- The accepted branded device executable SHA-256 is
+  `e9d1397ddba0a79f825527d2aea4ea1d2eabcd4b6520f7236367d5ec9d406267`;
+  the byte-identical IPA is
+  `70f57562634715bc8a60910b265ea8d2b58867f96ab8ec09a8d65be1fa48f367`,
+  and both checkouts produced `f3d.o2r` SHA-256
+  `19f39610c27f4a62ad1d9309b4492a3803231d3272ec232490e6a4e9216e0241`.
 
 ## In progress
 
@@ -141,7 +159,6 @@ BrawlerPad macOS package work stays explicitly open.
 
 ## Not yet claimed
 
-- A BrawlerPad macOS app bundle.
 - Physical device testing, complete touch gameplay, or the full lifecycle/audio
   interruption matrix.
 
