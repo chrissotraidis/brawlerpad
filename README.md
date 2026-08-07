@@ -30,7 +30,7 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Developer-preview `.ipa` | **In preparation** | No downloadable IPA is published yet. The release asset will be published separately after final packaging. |
+| Developer-preview `.ipa` | **Built and audited; publication pending** | `BrawlerPad-0.1.0-preview.1-unsigned.ipa` is a ROM-free arm64 build with SHA-256 `d41eeffc91f9440b22d268e69e39150aacd5ebbbf4a5cd9cbe960982e2c4531d`. It is unsigned and requires re-signing before device installation; a download link will be added when it is published. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -287,9 +287,11 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-There is no published binary release yet. `scripts/package-ios.sh` creates an
-unsigned, ROM-free proof IPA locally. It must be re-signed with your own Apple
-identity before installation on a standard device.
+The first ROM-free developer-preview IPA has been built and audited locally as
+`BrawlerPad-0.1.0-preview.1-unsigned.ipa` (SHA-256
+`d41eeffc91f9440b22d268e69e39150aacd5ebbbf4a5cd9cbe960982e2c4531d`). It is
+not published for download yet. The unsigned IPA must be re-signed with an
+Apple identity before installation on a standard device.
 </details>
 
 <details>
