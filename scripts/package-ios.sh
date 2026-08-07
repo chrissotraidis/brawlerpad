@@ -31,7 +31,7 @@ package_root="$(mktemp -d /tmp/brawlerpad-package.XXXXXX)"
 trap 'rm -rf "$package_root"' EXIT
 mkdir -p "$package_root/Payload" "$package_root/ThirdPartyLicenses"
 ditto "$APP" "$package_root/Payload/BrawlerPad.app"
-cp "$BRAWLERPAD_ROOT/docs/LEGAL.md" "$package_root/RIGHTS_AND_LICENSES.md"
+cp "$BRAWLERPAD_ROOT/RIGHTS_AND_LICENSES.md" "$package_root/RIGHTS_AND_LICENSES.md"
 cp "$BRAWLERPAD_ROOT/docs/DEPENDENCIES.md" "$package_root/DEPENDENCIES.md"
 
 license_count=0

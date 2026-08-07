@@ -13,11 +13,16 @@
   <img alt="ROM not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
+![BrawlerPad running a four-player match with the iPad touch controller](docs/readme/brawlerpad-yoshi-battle.jpg)
+
 BrawlerPad is an unofficial native iOS, iPadOS, and Apple Silicon macOS
 porting project based on reverse-engineered game code. It is not a
 general-purpose Nintendo 64 emulator and is not affiliated with or endorsed by
-Nintendo. No ROM or original copyrighted game assets are included. Users must
-provide their own legally obtained game data.
+Nintendo. No ROM, extracted game-asset bundle, or playable archive is included.
+Users must provide their own legally obtained game data. This repository contains the
+Apple integration and reproducible build scripts; read the scoped
+[rights and licensing boundary](RIGHTS_AND_LICENSES.md) before building or
+sharing a binary.
 
 ## Install status
 
@@ -25,7 +30,7 @@ provide their own legally obtained game data.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Unsigned iPhone/iPad proof IPA | **Buildable now** | Run `scripts/build-ios-device.sh` and `scripts/package-ios.sh` for the deterministic, ROM-free audit artifact. |
+| Developer-preview `.ipa` | **In preparation** | No downloadable IPA is published yet. The release asset will be published separately after final packaging. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -49,7 +54,8 @@ scripts/package-ios.sh
 
 All generated source trees, build products, packages, ROMs, and extracted game
 archives stay outside Git. Simulator and physical-device installation commands
-are documented in [docs/BUILDING.md](docs/BUILDING.md).
+are documented in [docs/BUILDING.md](docs/BUILDING.md). Before publishing or
+sharing a binary, follow the [release checklist](docs/RELEASE_CHECKLIST.md).
 
 ## Status
 
@@ -210,6 +216,34 @@ Every touch target feeds the same normalized SDL/ControlDeck player-one path as
 physical controllers. Opening the native menu cancels held input and removes the
 gameplay overlay until the menu closes.
 
+## Current screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/readme/brawlerpad-character-select.jpg" alt="BrawlerPad character select with iPad touch controls">
+    </td>
+    <td width="50%">
+      <img src="docs/readme/brawlerpad-samus-link.jpg" alt="Samus versus Link on BrawlerPad">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Ready to fight</strong><br>Character select remains fully visible behind the touch overlay.</td>
+    <td align="center"><strong>Native match flow</strong><br>Menus, stages, and gameplay run through the Apple-platform build.</td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <img src="docs/readme/brawlerpad-title.jpg" alt="BrawlerPad title screen with iPad touch controls">
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><strong>First launch to match</strong><br>The app guides local ROM setup, then keeps its controls close at hand.</td>
+  </tr>
+</table>
+
+The hero and gallery captures use locally supplied game data. No ROM, save, or
+playable archive is included in this repository.
+
 ## What works
 
 | Area | Current result |
@@ -307,8 +341,9 @@ separate signing, review, account, and release work.
 | [`docs/BUILDING.md`](docs/BUILDING.md) | Full build, install, and signing instructions |
 | [`docs/TESTING.md`](docs/TESTING.md) | Evidence matrix and explicit acceptance boundaries |
 | [`docs/STATUS.md`](docs/STATUS.md) | Current verified state and remaining work |
+| [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | Source and binary-publication gates |
 | [`docs/WORKLOG.md`](docs/WORKLOG.md) | Chronological implementation and test record |
-| [`docs/LEGAL.md`](docs/LEGAL.md) | Rights and redistribution boundary |
+| [`RIGHTS_AND_LICENSES.md`](RIGHTS_AND_LICENSES.md) | Rights and redistribution boundary |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Exact upstream revisions, purposes, and licenses |
 
 Generated source trees, build directories, artifacts, ROMs, and ROM-derived
@@ -320,7 +355,8 @@ Use [GitHub Issues](https://github.com/chrissotraidis/brawlerpad/issues) for
 reproducible platform or gameplay defects. Include the platform, device/OS,
 commit, build command, observable behavior, and relevant non-sensitive logs.
 Never attach or request ROMs, generated playable archives, saves, credentials,
-or signing material.
+or signing material. Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a
+change and [SECURITY.md](SECURITY.md) before reporting a sensitive vulnerability.
 
 ## Legal and acknowledgements
 

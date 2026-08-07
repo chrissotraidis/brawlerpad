@@ -1,6 +1,11 @@
 # Status
 
-Updated: 2026-08-03.
+Updated: 2026-08-07.
+
+The public-source-release README, screenshots, rights boundary, contribution
+guide, security policy, and binary release checklist were refreshed on this
+date. This documentation update does not change the runtime evidence below;
+the listed hardware-only acceptance boundaries remain explicit until re-run.
 
 ## Current milestone
 
