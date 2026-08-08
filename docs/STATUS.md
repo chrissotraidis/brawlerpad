@@ -7,15 +7,18 @@ guide, security policy, and binary release checklist were refreshed on this
 date. This documentation update does not change the runtime evidence below;
 the listed hardware-only acceptance boundaries remain explicit until re-run.
 
-The first current-source unsigned developer-preview IPA was rebuilt and audited
-on 2026-08-07: `BrawlerPad-0.1.0-preview.1-unsigned.ipa`, SHA-256
-`d41eeffc91f9440b22d268e69e39150aacd5ebbbf4a5cd9cbe960982e2c4531d`.
-It is a ROM-free arm64 proof artifact, carries the required rights and
-third-party notices, and is intentionally unsigned; it is not yet a published
-download or a standard-device installer. The attached iPad's installed
-`com.brawlerpad.app` reports the matching application version `0.1.0` (build
-`1`) and launched into a live BrawlerPad process. Version matching does not
-substitute for a source-commit identity or hands-on gameplay acceptance.
+The current-source unsigned developer-preview IPA was rebuilt, audited, and
+published on 2026-08-07 as
+[`v0.1.0-preview.1`](https://github.com/chrissotraidis/brawlerpad/releases/tag/v0.1.0-preview.1):
+`BrawlerPad-0.1.0-preview.1-unsigned.ipa`, SHA-256
+`3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`.
+It is a ROM-free arm64 release artifact with a runtime UUID, required rights,
+and third-party notices. It is intentionally unsigned and must be re-signed by
+the downloader; it is not an App Store, TestFlight, or computer-free installer.
+The attached iPad's installed `com.brawlerpad.app` reports the matching
+application version `0.1.0` (build `1`) and launched into a live BrawlerPad
+process. Version matching does not substitute for a source-commit identity or
+hands-on gameplay acceptance.
 
 ## Current milestone
 

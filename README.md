@@ -30,7 +30,7 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Developer-preview `.ipa` | **Built and audited; publication pending** | `BrawlerPad-0.1.0-preview.1-unsigned.ipa` is a ROM-free arm64 build with SHA-256 `d41eeffc91f9440b22d268e69e39150aacd5ebbbf4a5cd9cbe960982e2c4531d`. It is unsigned and requires re-signing before device installation; a download link will be added when it is published. |
+| Developer-preview `.ipa` | **Available with re-signing** | [Download Preview 0.1.0 build 1](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.1/BrawlerPad-0.1.0-preview.1-unsigned.ipa). It is a ROM-free arm64 build with SHA-256 `3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`; re-sign it with your own Apple identity before installation. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -287,11 +287,11 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-The first ROM-free developer-preview IPA has been built and audited locally as
-`BrawlerPad-0.1.0-preview.1-unsigned.ipa` (SHA-256
-`d41eeffc91f9440b22d268e69e39150aacd5ebbbf4a5cd9cbe960982e2c4531d`). It is
-not published for download yet. The unsigned IPA must be re-signed with an
-Apple identity before installation on a standard device.
+[Download BrawlerPad 0.1.0 Preview 1](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.1/BrawlerPad-0.1.0-preview.1-unsigned.ipa).
+It is an unsigned, ROM-free arm64 IPA with SHA-256
+`3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`.
+It retains the runtime UUID required by iOS, but you must re-sign it with your
+own Apple identity before installation. See [docs/INSTALL_IPA.md](docs/INSTALL_IPA.md).
 </details>
 
 <details>
@@ -341,6 +341,7 @@ separate signing, review, account, and release work.
 | [`docs/PLAN.md`](docs/PLAN.md) | Architecture and milestone plan |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Runtime and platform boundaries |
 | [`docs/BUILDING.md`](docs/BUILDING.md) | Full build, install, and signing instructions |
+| [`docs/INSTALL_IPA.md`](docs/INSTALL_IPA.md) | Developer-preview IPA download and local re-signing guide |
 | [`docs/TESTING.md`](docs/TESTING.md) | Evidence matrix and explicit acceptance boundaries |
 | [`docs/STATUS.md`](docs/STATUS.md) | Current verified state and remaining work |
 | [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | Source and binary-publication gates |
