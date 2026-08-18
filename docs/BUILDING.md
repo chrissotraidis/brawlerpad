@@ -180,8 +180,8 @@ Create the ignored unsigned proof IPA:
 scripts/package-ios.sh
 ```
 
-The default output is
-`artifacts/BrawlerPad-0.1.0-preview.1-unsigned.ipa`. Packaging copies the app,
+The default output for build 2 is
+`artifacts/BrawlerPad-0.1.0-preview.2-unsigned.ipa`. Packaging copies the app,
 rights and dependency manifests, and license/notice files discovered in both
 the pinned source tree and the selected build's fetched dependencies. It
 normalizes archive timestamps and ordering, then audits the app and IPA. The

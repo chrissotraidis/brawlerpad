@@ -646,3 +646,26 @@
   recursive audit. Two packages from that exact app were byte-identical at
   IPA SHA-256
   `2cf5121dedccb02f3afb65fed9e9e2f8230c68e665daea55d84beeffbce2d2ea`.
+
+## 2026-08-18 — SDL2 controller reconciliation and Preview 2
+
+- Traced controller ownership to libultraship's SDL2-backed ControlDeck. The
+  prior manager depended on add/remove refreshes, reopened handles without
+  closing superseded ones, and did not reconcile on startup or foreground.
+- Added targeted instance-ID reconciliation that retains attached controllers
+  and player slots, closes stale handles, releases stale per-port ownership,
+  assigns returning/extra controllers to the first free slot, and runs for
+  startup, add/remove/remap, foreground, and a bounded active check.
+- Added production-source virtual-controller regression coverage for missed
+  removal with held input, neutral state, player-1 reclaim, stable player-2
+  assignment, and foreground reconciliation. Focused tests, safety/diff/patch
+  checks, arm64 Simulator, and generic iPhoneOS Release builds passed.
+- Installed development-signed `0.1.0` build 2 in place on the attached iPad.
+  Existing ROM, generated archive/recipe, config, and controller preferences
+  matched pre-install hashes. The checksum-valid save retained all content and
+  advanced only its expected boot count from 11 to 14 across final validation
+  launches.
+- Packaged the ROM-free unsigned IPA twice with identical bytes. Preview 2 IPA
+  SHA-256 is
+  `67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
+  Physical Bluetooth/wired/sleep/mapping/two-controller tests remain open.

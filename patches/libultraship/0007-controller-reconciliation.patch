@@ -1,0 +1,192 @@
+diff --git a/include/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.h b/include/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.h
+index ffa3ea9e..6b53ffd4 100644
+--- a/include/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.h
++++ b/include/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.h
+@@ -33,6 +33,7 @@ class ConnectedPhysicalDeviceManager {
+
+     void HandlePhysicalDeviceConnect(int32_t sdlDeviceIndex);
+     void HandlePhysicalDeviceDisconnect(int32_t sdlJoystickInstanceId);
++    void ReconcileConnectedSDLGamepads(const char* reason);
+     void RefreshConnectedSDLGamepads();
+
+   private:
+diff --git a/src/ship/controller/controldeck/ControlDeck.cpp b/src/ship/controller/controldeck/ControlDeck.cpp
+index ef0c46bd..6ef4d8c2 100644
+--- a/src/ship/controller/controldeck/ControlDeck.cpp
++++ b/src/ship/controller/controldeck/ControlDeck.cpp
+@@ -82,6 +82,8 @@ void ControlDeck::Init(uint8_t* controllerBits) {
+     mControllerBits = controllerBits;
+     *mControllerBits |= 1 << 0;
+
++    mConnectedPhysicalDeviceManager->ReconcileConnectedSDLGamepads("startup");
++
+     for (auto port : mPorts) {
+         if (port->GetConnectedController()->HasConfig()) {
+             port->GetConnectedController()->ReloadAllMappingsFromConfig();
+diff --git a/src/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.cpp b/src/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.cpp
+index 8851bef3..fc4843fb 100644
+--- a/src/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.cpp
++++ b/src/ship/controller/physicaldevice/ConnectedPhysicalDeviceManager.cpp
+@@ -6,6 +6,10 @@ ConnectedPhysicalDeviceManager::ConnectedPhysicalDeviceManager() {
+ }
+
+ ConnectedPhysicalDeviceManager::~ConnectedPhysicalDeviceManager() {
++    for (const auto& [instanceId, gamepad] : mConnectedSDLGamepads) {
++        SPDLOG_INFO("ConnectedPhysicalDeviceManager: closing SDL gamepad instanceId={} during shutdown", instanceId);
++        SDL_GameControllerClose(gamepad);
++    }
+ }
+
+ std::unordered_map<int32_t, SDL_GameController*>
+@@ -59,14 +63,24 @@ bool ConnectedPhysicalDeviceManager::IsVendorIdIgnoredGlobally(uint16_t vid) con
+ }
+
+ void ConnectedPhysicalDeviceManager::HandlePhysicalDeviceConnect(int32_t sdlDeviceIndex) {
+-    RefreshConnectedSDLGamepads();
++    SPDLOG_INFO("ConnectedPhysicalDeviceManager: controller-added deviceIndex={}", sdlDeviceIndex);
++    ReconcileConnectedSDLGamepads("controller-added");
+ }
+
+ void ConnectedPhysicalDeviceManager::HandlePhysicalDeviceDisconnect(int32_t sdlJoystickInstanceId) {
+-    RefreshConnectedSDLGamepads();
++    SPDLOG_INFO("ConnectedPhysicalDeviceManager: controller-removed instanceId={}", sdlJoystickInstanceId);
++    ReconcileConnectedSDLGamepads("controller-removed");
+ }
+
+ void ConnectedPhysicalDeviceManager::RefreshConnectedSDLGamepads() {
++    ReconcileConnectedSDLGamepads("manual-refresh");
++}
++
++void ConnectedPhysicalDeviceManager::ReconcileConnectedSDLGamepads(const char* reason) {
++    if (SDL_strcmp(reason, "active-check") != 0) {
++        SPDLOG_INFO("ConnectedPhysicalDeviceManager: reconciling SDL gamepads reason={} joystickCount={}", reason,
++                    SDL_NumJoysticks());
++    }
+     // Snapshot the instance ids we already knew about. A refresh fires on
+     // EVERY controller add/remove event, and the per-port routing (ignore
+     // sets) must survive for pads that were already connected — previously
+@@ -93,10 +107,12 @@ void ConnectedPhysicalDeviceManager::RefreshConnectedSDLGamepads() {
+         SDL_JoystickGetGUIDString(deviceGUID, deviceGuidCStr, sizeof(deviceGuidCStr));
+
+         if (!SDL_IsGameController(i)) {
+-            SPDLOG_WARN("SDL Joystick (GUID: {}) not recognized as gamepad."
+-                        "This is likely due to a missing mapping string in gamecontrollerdb.txt."
+-                        "Refer to https://github.com/mdqinc/SDL_GameControllerDB for more information.",
+-                        deviceGuidCStr);
++            if (SDL_strcmp(reason, "active-check") != 0) {
++                SPDLOG_WARN("SDL Joystick (GUID: {}) not recognized as gamepad."
++                            "This is likely due to a missing mapping string in gamecontrollerdb.txt."
++                            "Refer to https://github.com/mdqinc/SDL_GameControllerDB for more information.",
++                            deviceGuidCStr);
++            }
+             continue;
+         }
+
+@@ -114,16 +130,41 @@ void ConnectedPhysicalDeviceManager::RefreshConnectedSDLGamepads() {
+             continue;
+         }
+
+-        auto gamepad = SDL_GameControllerOpen(i);
+-        if (gamepad == nullptr) {
+-            SPDLOG_ERROR("SDL GameControllerOpen error (GUID: {}): {}", deviceGuidCStr, SDL_GetError());
++        auto instanceId = SDL_JoystickGetDeviceInstanceID(i);
++        if (instanceId < 0) {
++            SPDLOG_ERROR("SDL JoystickGetDeviceInstanceID error (deviceIndex={} GUID: {}): {}", i, deviceGuidCStr,
++                         SDL_GetError());
+             continue;
+         }
+
+-        auto instanceId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gamepad));
+-        if (instanceId < 0) {
+-            SPDLOG_ERROR("SDL JoystickInstanceID error (GUID: {}): {}", deviceGuidCStr, SDL_GetError());
+-            continue;
++        SDL_GameController* gamepad = nullptr;
++        const auto previous = previouslyConnected.find(instanceId);
++        if (previous != previouslyConnected.end()) {
++            SDL_Joystick* joystick = SDL_GameControllerGetJoystick(previous->second);
++            const bool attached = SDL_GameControllerGetAttached(previous->second) == SDL_TRUE;
++            const bool sameInstance = joystick != nullptr && SDL_JoystickInstanceID(joystick) == instanceId;
++            if (attached && sameInstance) {
++                gamepad = previous->second;
++                previouslyConnected.erase(previous);
++            } else {
++                SPDLOG_INFO("ConnectedPhysicalDeviceManager: releasing stale SDL gamepad instanceId={} reason={} "
++                            "attached={} sameInstance={}",
++                            instanceId, reason, attached, sameInstance);
++                SDL_GameControllerClose(previous->second);
++                previouslyConnected.erase(previous);
++            }
++        }
++
++        if (gamepad == nullptr) {
++            gamepad = SDL_GameControllerOpen(i);
++            if (gamepad == nullptr) {
++                SPDLOG_ERROR("SDL GameControllerOpen error (deviceIndex={} GUID: {}): {}", i, deviceGuidCStr,
++                             SDL_GetError());
++                continue;
++            }
++            newInstanceIds.push_back(instanceId);
++            SPDLOG_INFO("ConnectedPhysicalDeviceManager: opened SDL gamepad deviceIndex={} instanceId={} reason={}",
++                        i, instanceId, reason);
+         }
+
+         std::string gamepadName;
+@@ -138,8 +175,14 @@ void ConnectedPhysicalDeviceManager::RefreshConnectedSDLGamepads() {
+         mConnectedSDLGamepads[instanceId] = gamepad;
+         mConnectedSDLGamepadNames[instanceId] = gamepadName;
+
+-        if (!previouslyConnected.contains(instanceId)) {
+-            newInstanceIds.push_back(instanceId);
++    }
++
++    for (const auto& [instanceId, gamepad] : previouslyConnected) {
++        SPDLOG_INFO("ConnectedPhysicalDeviceManager: releasing disconnected SDL gamepad instanceId={} reason={}",
++                    instanceId, reason);
++        SDL_GameControllerClose(gamepad);
++        for (uint8_t port = 0; port < 4; port++) {
++            mIgnoredInstanceIds[port].erase(instanceId);
+         }
+     }
+
+diff --git a/src/ship/controller/physicaldevice/SDLAddRemoveDeviceEventHandler.cpp b/src/ship/controller/physicaldevice/SDLAddRemoveDeviceEventHandler.cpp
+index 2e519f81..20269f38 100644
+--- a/src/ship/controller/physicaldevice/SDLAddRemoveDeviceEventHandler.cpp
++++ b/src/ship/controller/physicaldevice/SDLAddRemoveDeviceEventHandler.cpp
+@@ -16,6 +16,13 @@ void SDLAddRemoveDeviceEventHandler::DrawElement() {
+
+ void SDLAddRemoveDeviceEventHandler::UpdateElement() {
+     SDL_PumpEvents();
++    static Uint32 nextActiveReconcileAt = 0;
++    const Uint32 now = SDL_GetTicks();
++    if (static_cast<Sint32>(now - nextActiveReconcileAt) >= 0) {
++        Context::GetInstance()->GetControlDeck()->GetConnectedPhysicalDeviceManager()->ReconcileConnectedSDLGamepads(
++            "active-check");
++        nextActiveReconcileAt = now + 1000;
++    }
+     SDL_Event event;
+     while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEADDED) > 0) {
+         // from https://wiki.libsdl.org/SDL2/SDL_ControllerDeviceEvent: which - the joystick device index for
+diff --git a/src/fast/backends/gfx_sdl2.cpp b/src/fast/backends/gfx_sdl2.cpp
+--- a/src/fast/backends/gfx_sdl2.cpp
++++ b/src/fast/backends/gfx_sdl2.cpp
+@@ -674,5 +674,11 @@ void GfxWindowBackendSDL2::HandleSingleEvent(SDL_Event& event) {
+     Ship::Context::GetInstance()->GetWindow()->GetGui()->HandleWindowEvents(event_impl);
+     switch (event.type) {
++#if defined(__IOS__)
++        case SDL_CONTROLLERDEVICEREMAPPED:
++            Ship::Context::GetInstance()->GetControlDeck()->GetConnectedPhysicalDeviceManager()
++                ->ReconcileConnectedSDLGamepads("controller-remapped");
++            break;
++#endif
+ #ifndef TARGET_WEB
+         // Scancodes are broken in Emscripten SDL2: https://bugzilla.libsdl.org/show_bug.cgi?id=3259
+         case SDL_KEYDOWN:
+@@ -745,6 +751,8 @@ void GfxWindowBackendSDL2::HandleSingleEvent(SDL_Event& event) {
+         case SDL_APP_WILLENTERFOREGROUND:
+             break;
+         case SDL_APP_DIDENTERFOREGROUND:
++            Ship::Context::GetInstance()->GetControlDeck()->GetConnectedPhysicalDeviceManager()
++                ->ReconcileConnectedSDLGamepads("foreground");
+             RetryIOSAudioInitialization();
+             SetIOSAudioPaused(false);
+             mIsBackgrounded = false;

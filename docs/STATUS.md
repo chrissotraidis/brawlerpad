@@ -1,24 +1,59 @@
 # Status
 
-Updated: 2026-08-07.
+Updated: 2026-08-18.
 
-The public-source-release README, screenshots, rights boundary, contribution
-guide, security policy, and binary release checklist were refreshed on this
-date. This documentation update does not change the runtime evidence below;
-the listed hardware-only acceptance boundaries remain explicit until re-run.
+This update records the Preview 2 controller lifecycle repair, current iPad
+deployment, and release package evidence. Earlier platform evidence remains
+below, with hardware-only acceptance boundaries kept explicit until re-run.
 
-The current-source unsigned developer-preview IPA was rebuilt, audited, and
-published on 2026-08-07 as
-[`v0.1.0-preview.1`](https://github.com/chrissotraidis/brawlerpad/releases/tag/v0.1.0-preview.1):
-`BrawlerPad-0.1.0-preview.1-unsigned.ipa`, SHA-256
-`3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`.
+The current-source unsigned developer-preview IPA was rebuilt and audited for
+publication as
+[`v0.1.0-preview.2`](https://github.com/chrissotraidis/brawlerpad/releases/tag/v0.1.0-preview.2):
+`BrawlerPad-0.1.0-preview.2-unsigned.ipa`, SHA-256
+`67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
 It is a ROM-free arm64 release artifact with a runtime UUID, required rights,
 and third-party notices. It is intentionally unsigned and must be re-signed by
 the downloader; it is not an App Store, TestFlight, or computer-free installer.
-The attached iPad's installed `com.brawlerpad.app` reports the matching
-application version `0.1.0` (build `1`) and launched into a live BrawlerPad
-process. Version matching does not substitute for a source-commit identity or
-hands-on gameplay acceptance.
+The attached iPad's installed `com.brawlerpad.app` reports application version
+`0.1.0` (build `2`) and launched through archive mount, renderer/audio startup,
+controller startup reconciliation, and foreground reconciliation. This is
+device deployment/runtime evidence, not physical-controller acceptance.
+
+## Preview 2 controller lifecycle repair
+
+BrawlerPad uses SDL2 through libultraship's engine-managed ControlDeck and
+`ConnectedPhysicalDeviceManager`; it does not own a separate PaperPad-style
+controller layer. The prior manager refreshed only on add/remove events,
+reopened handles without closing superseded ones, and had no startup,
+foreground, remap, or active validity reconciliation. A removal missed during
+sleep could therefore leave a stale player slot and held input behind.
+
+The targeted repair reuses only attached handles with matching SDL instance
+IDs, closes and removes stale handles, retains valid player ownership, assigns
+a returning sole controller to player 1, and assigns a genuinely additional
+controller to the next free slot. Reconciliation runs at startup, SDL add,
+remove and iOS remap events, foreground resume, plus a one-second active check;
+the controller subsystem is never restarted and mappings/preferences are not
+rewritten.
+
+The deterministic SDL virtual-controller regression covers missed removal
+with a held button and stick axis, neutral state afterward, player-1 reclaim,
+player-2 assignment, preservation of player 1 when player 2 changes, and
+foreground reconciliation. The current ROM-free arm64 Simulator and iPhoneOS
+Release targets build successfully, and two audited IPA packages are
+byte-identical. The macOS package replay is currently blocked by an upstream
+spdlog/bundled-fmt compile incompatibility with AppleClang 21; no controller
+source workaround was introduced for that unrelated host target failure.
+
+The development-signed runtime build was installed in place on the attached
+iPad with the same bundle ID. Readback proved the ROM, generated archive,
+recipe, config, and iOS/controller preferences byte-identical. The save was
+normally rewritten on boot: both redundant slots remain checksum-valid and all
+unlocks, records, settings, and battle counts are unchanged; repeated final
+validation launches advanced only boot count from 11 to 14. Bluetooth, wired,
+natural sleep/wake, held-input, mapping, touch-overlay auto-hide, and
+two-real-controller acceptance remain open because no physical controller was
+connected during this run.
 
 ## Current milestone
 

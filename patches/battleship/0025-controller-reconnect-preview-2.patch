@@ -1,0 +1,12 @@
+diff --git a/ios/Info.plist.in b/ios/Info.plist.in
+--- a/ios/Info.plist.in
++++ b/ios/Info.plist.in
+@@ -19,7 +19,7 @@
+     <key>CFBundleShortVersionString</key>
+     <string>0.1.0</string>
+     <key>CFBundleVersion</key>
+-    <string>1</string>
++    <string>2</string>
+     <key>LSRequiresIPhoneOS</key>
+     <true/>
+     <key>LSSupportsOpeningDocumentsInPlace</key>

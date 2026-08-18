@@ -30,7 +30,7 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Developer-preview `.ipa` | **Available with re-signing** | [Download Preview 0.1.0 build 1](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.1/BrawlerPad-0.1.0-preview.1-unsigned.ipa). It is a ROM-free arm64 build with SHA-256 `3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`; re-sign it with your own Apple identity before installation. |
+| Developer-preview `.ipa` | **Available with re-signing** | [Download Preview 0.1.0 build 2](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.2/BrawlerPad-0.1.0-preview.2-unsigned.ipa). It is a ROM-free arm64 build with SHA-256 `67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`; re-sign it with your own Apple identity before installation. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -81,6 +81,14 @@ enabled. Earlier launches on both devices also confirmed ROM/archive loading,
 32 kHz music/SFX initialization, touch-controller assignment, configuration,
 and save creation. The runtime recovers a persisted Null audio backend and can
 safely migrate a ROM accidentally copied to the old support-path location.
+
+Build 2 also repairs the engine-managed SDL2 controller lifecycle. The
+ControlDeck manager now reconciles current SDL controllers at startup, add,
+remove and remap events, foreground resume, and a bounded active check. Valid
+instance IDs retain their player slots; stale handles are closed and removed;
+the sole returning controller reclaims player 1; and additional controllers
+take the next free slot. Removing a stale controller also removes it from the
+gameplay map, so held button and axis state cannot survive disconnect.
 
 The repository still distributes no signed app, ROM, save, or playable archive.
 Hands-on acceptance remains open for confirming uninterrupted audio during a
@@ -287,9 +295,9 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-[Download BrawlerPad 0.1.0 Preview 1](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.1/BrawlerPad-0.1.0-preview.1-unsigned.ipa).
+[Download BrawlerPad 0.1.0 Preview 2](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.2/BrawlerPad-0.1.0-preview.2-unsigned.ipa).
 It is an unsigned, ROM-free arm64 IPA with SHA-256
-`3d8a12803c86ae066e3d33f26e80d4400d9ed9e9cd00191a104e95351f3f936f`.
+`67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
 It retains the runtime UUID required by iOS, but you must re-sign it with your
 own Apple identity before installation. See [docs/INSTALL_IPA.md](docs/INSTALL_IPA.md).
 </details>
@@ -314,10 +322,11 @@ listening and real headphone/Bluetooth interruption tests remain open.
 <details>
 <summary><strong>Does it support controllers?</strong></summary>
 
-Yes at the architecture and detection level: SDL mappings and the normalized
-ControlDeck path are included, and Simulator controller detection/automatic
-touch hiding work. Actual physical-controller gameplay and reconnect remain a
-hardware acceptance item.
+Yes. Physical controllers use SDL2 through libultraship's engine-managed
+ControlDeck. Build 2 deterministically covers missed removal, held-input
+neutralization, player-1 reclaim, stable two-player ownership, and foreground
+reconciliation. Bluetooth, wired, natural-sleep, full mapping, and two-real-pad
+acceptance remain hardware tests and are not implied by the automated result.
 </details>
 
 <details>
