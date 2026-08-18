@@ -3,6 +3,48 @@
 Every platform claim requires a build, install where applicable, launch, and
 observable runtime result. Compilation alone is not a pass.
 
+## Preview 2 controller reconciliation
+
+The actual input backend is SDL2 managed by libultraship's ControlDeck. Run the
+focused regression against the patched production manager with:
+
+```sh
+tests/test-controller-reconciliation.sh
+```
+
+SDL virtual controllers deterministically simulate a missed removal while A
+and the left stick are held, stale player-1 removal and neutral input, a sole
+returning controller reclaiming player 1, a second controller taking player 2,
+player-1 preservation when player 2 changes, and foreground reconciliation.
+The test passed on 2026-08-18. This proves the manager's ownership and input-map
+behavior; it is not Bluetooth, wired, or natural-sleep hardware evidence.
+
+The same source passed the ROM-free arm64 iOS Simulator Release build, focused
+test, repository safety check, patch replay checks, `git diff --check`, generic
+arm64 iPhoneOS Release build, strict app/IPA audit, and two byte-identical IPA
+packaging runs. The current IPA is
+`BrawlerPad-0.1.0-preview.2-unsigned.ipa`, SHA-256
+`67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
+It is ROM/save/log/credential/signing-material free, retains a runtime UUID,
+targets iPhoneOS arm64 with minimum iOS 17.0, and includes rights, dependency,
+and third-party notices. It has no privacy manifest; this unsigned self-signable
+preview is not submitted to the App Store or TestFlight, where privacy-manifest
+requirements must be reassessed.
+
+Before the in-place iPad install, the stopped app's Documents and Library were
+backed up separately outside Git. The build-2 app retained bundle ID
+`com.brawlerpad.app`, passed strict development-signature/provisioning checks,
+launched as the exact installed process, mounted existing game data, initialized
+renderer/audio, and logged startup plus foreground controller reconciliation.
+Post-install readback matched the ROM, generated archive, recipe, config, and
+iOS/controller preference hashes exactly. The save remained semantically
+identical and checksum-valid in both redundant slots; successive final
+validation launches changed only boot count 11 to 14.
+
+Physical Bluetooth reconnect, wired reconnect, natural sleep/wake, reconnect
+while active, held-input release, full mapping, touch-overlay auto-hide, and
+two-controller ownership were not exercised and remain open hardware gates.
+
 ## macOS baseline matrix
 
 | Check | Evidence required | Status |
