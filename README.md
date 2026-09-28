@@ -30,7 +30,6 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Developer-preview `.ipa` | **Available with re-signing** | [Download Preview 0.1.0 build 2](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.2/BrawlerPad-0.1.0-preview.2-unsigned.ipa). It is a ROM-free arm64 build with SHA-256 `67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`; re-sign it with your own Apple identity before installation. |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -295,11 +294,7 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-[Download BrawlerPad 0.1.0 Preview 2](https://github.com/chrissotraidis/brawlerpad/releases/download/v0.1.0-preview.2/BrawlerPad-0.1.0-preview.2-unsigned.ipa).
-It is an unsigned, ROM-free arm64 IPA with SHA-256
-`67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
-It retains the runtime UUID required by iOS, but you must re-sign it with your
-own Apple identity before installation. See [docs/INSTALL_IPA.md](docs/INSTALL_IPA.md).
+Previous builds have been retired; a new version is in progress.
 </details>
 
 <details>
