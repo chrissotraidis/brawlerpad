@@ -1,6 +1,10 @@
 # Install the developer-preview IPA
 
-The [BrawlerPad 0.1.0 Preview 2 release](https://github.com/chrissotraidis/brawlerpad/releases/tag/v0.1.0-preview.2)
+> [!IMPORTANT]
+> **Downloads retired.** Prebuilt builds are no longer published, and release
+> links on this page no longer work. A build-it-yourself version is in progress.
+
+The BrawlerPad 0.1.0 Preview 2 release (retired)
 contains an unsigned, ROM-free arm64 IPA for iOS and iPadOS 17 or later.
 
 1. Download `BrawlerPad-0.1.0-preview.2-unsigned.ipa` from the release page.
