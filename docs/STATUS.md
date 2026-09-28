@@ -8,7 +8,7 @@ below, with hardware-only acceptance boundaries kept explicit until re-run.
 
 The current-source unsigned developer-preview IPA was rebuilt and audited for
 publication as
-[`v0.1.0-preview.2`](https://github.com/chrissotraidis/brawlerpad/releases/tag/v0.1.0-preview.2):
+`v0.1.0-preview.2` (retired):
 `BrawlerPad-0.1.0-preview.2-unsigned.ipa`, SHA-256
 `67795d4f8a07641dde7d89102617c328bb3ea3aaa82f365efe544084fd2ea880`.
 It is a ROM-free arm64 release artifact with a runtime UUID, required rights,
