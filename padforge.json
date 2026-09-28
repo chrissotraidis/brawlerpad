@@ -4,7 +4,7 @@
   "name": "BrawlerPad",
   "game": "Super Smash Bros. (N64) via BattleShip",
   "kind": "decomp-patches",
-  "status": "draft-untested",
+  "status": "experimental",
   "inputs": [
     {
       "type": "n64-rom",
