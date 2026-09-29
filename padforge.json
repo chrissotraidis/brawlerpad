@@ -44,7 +44,10 @@
           "command": [
             "/bin/bash",
             "{repo}/scripts/build-ios-device.sh"
-          ]
+          ],
+          "env": {
+            "BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK": "OFF"
+          }
         },
         {
           "stage": "package",
