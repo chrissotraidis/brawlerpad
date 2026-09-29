@@ -35,6 +35,15 @@ sharing a binary.
 
 ## Get started
 
+**The easy way:** download [PadForge](https://github.com/chrissotraidis/padforge/releases/latest)
+on an Apple Silicon Mac with Xcode, unzip it, double-click `PadForge.command` and choose
+BrawlerPad. PadForge builds a runnable app from this repository's latest release and saves an
+unsigned IPA in the folder you choose; install it with AltStore Classic, SideStore or Sideloadly,
+then choose your ROM in the app (see [First launch](#first-launch)). Releases publish no app:
+the app is compiled from the BattleShip decompilation, so you make your own.
+
+**By hand:**
+
 You need an Apple Silicon Mac, Xcode and its command-line tools, the dependencies
 listed in [the build guide](docs/BUILDING.md), and your own legally obtained
 supported US ROM. Then run:
