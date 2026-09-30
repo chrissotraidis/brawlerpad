@@ -30,15 +30,15 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
-| Make your own IPA with PadForge | **Available** | On an Apple Silicon Mac, [PadForge](https://github.com/chrissotraidis/padforge/releases/latest) builds BrawlerPad from this repository's latest release; see [Get started](#get-started). |
+| Make your own IPA with PadMint | **Available** | On an Apple Silicon Mac, [PadMint](https://github.com/chrissotraidis/padmint/releases/latest) builds BrawlerPad from this repository's latest release; see [Get started](#get-started). |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
 ## Get started
 
-**The easy way:** download [PadForge](https://github.com/chrissotraidis/padforge/releases/latest)
-on an Apple Silicon Mac with Xcode, unzip it, double-click `PadForge.command` and choose
-BrawlerPad. PadForge builds a runnable app from this repository's latest release and saves an
+**The easy way:** download [PadMint](https://github.com/chrissotraidis/padmint/releases/latest)
+on an Apple Silicon Mac with Xcode, unzip it, double-click `PadMint.command` and choose
+BrawlerPad. PadMint builds a runnable app from this repository's latest release and saves an
 unsigned IPA in the folder you choose; install it with AltStore Classic, SideStore or Sideloadly,
 then choose your ROM in the app (see [First launch](#first-launch)). Releases publish no app:
 the app is compiled from the BattleShip decompilation, so you make your own.
@@ -304,7 +304,7 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-There is no public IPA: BrawlerPad is compiled from the BattleShip decompilation, so PadForge builds your own on an Apple Silicon Mac. See [Get started](#get-started).
+There is no public IPA: BrawlerPad is compiled from the BattleShip decompilation, so PadMint builds your own on an Apple Silicon Mac. See [Get started](#get-started).
 </details>
 
 <details>
