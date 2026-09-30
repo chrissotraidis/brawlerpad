@@ -30,6 +30,7 @@ sharing a binary.
 |---|---|---|
 | Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
+| Make your own IPA with PadForge | **Available** | On an Apple Silicon Mac, [PadForge](https://github.com/chrissotraidis/padforge/releases/latest) builds BrawlerPad from this repository's latest release; see [Get started](#get-started). |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
 | App Store / TestFlight | **Not announced** | No public store listing or TestFlight exists. |
 
@@ -303,7 +304,7 @@ iPhoneOS app, and two byte-identical unsigned IPAs.
 <details>
 <summary><strong>Where is the IPA?</strong></summary>
 
-Previous builds have been retired; a new version is in progress.
+There is no public IPA: BrawlerPad is compiled from the BattleShip decompilation, so PadForge builds your own on an Apple Silicon Mac. See [Get started](#get-started).
 </details>
 
 <details>
