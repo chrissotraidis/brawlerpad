@@ -40,7 +40,7 @@ sharing a binary.
 on an Apple Silicon Mac with Xcode, `brew install cmake ninja python@3.11` and
 `python3.11 -m pip install --user Pillow`, unzip it, double-click `PadMint.command` and choose
 BrawlerPad. PadMint builds a runnable app from this repository's latest release and saves an
-unsigned IPA in the folder you choose; install it with AltStore Classic, SideStore or Sideloadly,
+unsigned IPA in your Downloads folder; install it with AltStore Classic, SideStore or Sideloadly,
 then choose your ROM in the app (see [First launch](#first-launch)). Releases publish no app:
 the app is compiled from the BattleShip decompilation, so you make your own.
 
