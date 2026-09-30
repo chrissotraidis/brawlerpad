@@ -8,7 +8,17 @@ BUILD_CONFIGURATION="${CONFIGURATION:-Release}"
 REPRODUCIBLE_DEVICE_LINK="${BRAWLERPAD_REPRODUCIBLE_DEVICE_LINK:-ON}"
 DEVICE_SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
 APP="$BATTLESHIP_BUILD/$BUILD_CONFIGURATION-iphoneos/BrawlerPad.app"
-PYTHON_PREFIX="$(brew --prefix python@3.11 2>/dev/null || true)"
+# Python 3.11 with Pillow: BRAWLERPAD_PYTHON, else Homebrew's python@3.11, else
+# python3.11 on PATH (python.org or another installer).
+PYTHON_EXECUTABLE="${BRAWLERPAD_PYTHON:-}"
+if [ -z "$PYTHON_EXECUTABLE" ]; then
+    PYTHON_PREFIX="$(brew --prefix python@3.11 2>/dev/null || true)"
+    if [ -n "$PYTHON_PREFIX" ] && [ -x "$PYTHON_PREFIX/bin/python3.11" ]; then
+        PYTHON_EXECUTABLE="$PYTHON_PREFIX/bin/python3.11"
+    else
+        PYTHON_EXECUTABLE="$(command -v python3.11 || true)"
+    fi
+fi
 
 if [ ! -f "$BATTLESHIP_SOURCE/CMakeLists.txt" ]; then
     echo "Pinned sources are missing; run scripts/clone-sources.sh first." >&2
@@ -20,11 +30,10 @@ if [ "$(uname -m)" != "arm64" ]; then
     exit 1
 fi
 
-if [ -z "$PYTHON_PREFIX" ] || [ ! -x "$PYTHON_PREFIX/bin/python3.11" ]; then
+if [ -z "$PYTHON_EXECUTABLE" ]; then
     echo "Python 3.11 is missing; run: brew install python@3.11" >&2
     exit 1
 fi
-PYTHON_EXECUTABLE="$PYTHON_PREFIX/bin/python3.11"
 if ! "$PYTHON_EXECUTABLE" -c 'from PIL import Image' >/dev/null 2>&1; then
     echo "Pillow is missing for $PYTHON_EXECUTABLE" >&2
     echo "Install it with: $PYTHON_EXECUTABLE -m pip install --user Pillow" >&2

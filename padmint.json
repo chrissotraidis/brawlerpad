@@ -99,6 +99,13 @@
           "-version"
         ],
         "note": "Install Xcode and its iOS platform"
+      },
+      {
+        "name": "python3.11",
+        "version_args": [
+          "--version"
+        ],
+        "note": "brew install python@3.11, then: python3.11 -m pip install --user Pillow"
       }
     ]
   },
