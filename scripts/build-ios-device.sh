@@ -96,7 +96,7 @@ if [ -d "$APP/_CodeSignature" ] || [ -f "$APP/embedded.mobileprovision" ]; then
     exit 1
 fi
 
-# One version for the app, its release and PadForge: version.json (the app is
+# One version for the app, its release and PadMint: version.json (the app is
 # still unsigned here, so stamping Info.plist is safe).
 /usr/bin/plutil -replace CFBundleShortVersionString -string "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$BRAWLERPAD_ROOT/version.json")" "$APP/Info.plist"
 /usr/bin/plutil -replace CFBundleVersion -string "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["build"])' "$BRAWLERPAD_ROOT/version.json")" "$APP/Info.plist"
