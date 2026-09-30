@@ -37,7 +37,8 @@ sharing a binary.
 ## Get started
 
 **The easy way:** download [PadMint](https://github.com/chrissotraidis/padmint/releases/latest)
-on an Apple Silicon Mac with Xcode, unzip it, double-click `PadMint.command` and choose
+on an Apple Silicon Mac with Xcode, `brew install cmake ninja python@3.11` and
+`python3.11 -m pip install --user Pillow`, unzip it, double-click `PadMint.command` and choose
 BrawlerPad. PadMint builds a runnable app from this repository's latest release and saves an
 unsigned IPA in the folder you choose; install it with AltStore Classic, SideStore or Sideloadly,
 then choose your ROM in the app (see [First launch](#first-launch)). Releases publish no app:
