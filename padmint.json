@@ -79,7 +79,10 @@
         "name": "cmake",
         "version_args": [
           "--version"
-        ]
+        ],
+        "min_version": "3.24",
+        "player": true,
+        "note": "Install CMake 3.24 or newer and make cmake available on PATH (for example: brew install cmake)."
       },
       {
         "name": "ninja",
@@ -98,14 +101,29 @@
         "version_args": [
           "-version"
         ],
-        "note": "Install Xcode and its iOS platform"
+        "player": true,
+        "note": "Install full Xcode and its iOS platform, then select that Xcode in Xcode Settings > Locations > Command Line Tools."
       },
       {
-        "name": "python3.11",
+        "name": "xcrun",
+        "label": "Xcode iPhoneOS SDK",
         "version_args": [
-          "--version"
+          "--sdk",
+          "iphoneos",
+          "--show-sdk-path"
         ],
-        "note": "brew install python@3.11, then: python3.11 -m pip install --user Pillow"
+        "player": true,
+        "note": "Install full Xcode and its iOS platform, then select that Xcode in Xcode Settings > Locations > Command Line Tools."
+      },
+      {
+        "name": "/bin/bash",
+        "label": "Brawler build Python + Pillow",
+        "version_args": [
+          "-c",
+          "PYTHON_EXECUTABLE=\"$BRAWLERPAD_PYTHON\"\nif [ -z \"$PYTHON_EXECUTABLE\" ]; then\n    PYTHON_PREFIX=\"$(brew --prefix python@3.11 2>/dev/null || true)\"\n    if [ -n \"$PYTHON_PREFIX\" ] && [ -x \"$PYTHON_PREFIX/bin/python3.11\" ]; then\n        PYTHON_EXECUTABLE=\"$PYTHON_PREFIX/bin/python3.11\"\n    else\n        PYTHON_EXECUTABLE=\"$(command -v python3.11 || true)\"\n    fi\nfi\nif [ -z \"$PYTHON_EXECUTABLE\" ]; then\n    exit 1\nfi\nif ! \"$PYTHON_EXECUTABLE\" -c 'from PIL import Image' >/dev/null 2>&1; then\n    exit 1\nfi\nprintf '%s\\n' \"$PYTHON_EXECUTABLE\""
+        ],
+        "player": true,
+        "note": "Brawler selects BRAWLERPAD_PYTHON first, then Homebrew python@3.11, then python3.11 on PATH. Install Python if none is available (for example: brew install python@3.11), and install Pillow into the selected interpreter with its -m pip install Pillow. For a virtual environment, use its Python without --user."
       }
     ]
   },
