@@ -125,6 +125,9 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0006-ios-responsive-menu-input.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0007-controller-reconciliation.patch"
+# SDL 2.32.10 UIKit scene startup: apps built with the iOS 27 SDK need it to open.
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
+    "$BRAWLERPAD_ROOT/patches/libultraship/0008-ios-uikit-scene-startup.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
     "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
@@ -177,6 +180,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0024-ios-responsive-settings.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0025-controller-reconnect-preview-2.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0026-ios-scene-manifest.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 
