@@ -11,6 +11,8 @@
   <img alt="Apple Silicon macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple">
   <img alt="Metal renderer" src="https://img.shields.io/badge/renderer-Metal-5E5CE6">
   <img alt="ROM not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
+  <a href="https://github.com/chrissotraidis/padmint"><img alt="Build BrawlerPad with PadMint" src="https://img.shields.io/badge/PadMint-build%20your%20own-3EB489"></a>
+  <a href="https://discord.gg/xwHfUD2bxW"><img alt="Join the BrawlerPad Discord" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&amp;logoColor=white"></a>
 </p>
 
 ![BrawlerPad running a four-player match with the iPad touch controller](docs/readme/brawlerpad-yoshi-battle.jpg)
@@ -23,6 +25,13 @@ Users must provide their own legally obtained game data. This repository contain
 Apple integration and reproducible build scripts; read the scoped
 [rights and licensing boundary](RIGHTS_AND_LICENSES.md) before building or
 sharing a binary.
+
+> [!NOTE]
+> **AI disclosure:** BrawlerPad uses substantial AI assistance for code, tests,
+> documentation, debugging and maintenance. Some support replies and maintenance
+> tasks are automated. There is no audited percentage of AI-generated code.
+> Build, test and device records describe what was checked. This disclosure
+> concerns BrawlerPad's workflow, not the authorship of its upstream projects.
 
 ## Install status
 
@@ -375,6 +384,17 @@ commit, build command, observable behavior, and relevant non-sensitive logs.
 Never attach or request ROMs, generated playable archives, saves, credentials,
 or signing material. Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a
 change and [SECURITY.md](SECURITY.md) before reporting a sensitive vulnerability.
+
+## Community and support
+
+[Join the Discord](https://discord.gg/xwHfUD2bxW) for help and news. It is one
+community for BrawlerPad and its sibling projects, such as KartPad, BlueWake and
+MeleePad: ask about setup, building with PadMint, and installing, share how it
+runs on your device, and hear about new releases first.
+
+Found a bug? [Open an
+issue](https://github.com/chrissotraidis/brawlerpad/issues) with your device,
+its OS version, and the steps that led to it.
 
 ## Legal and acknowledgements
 
