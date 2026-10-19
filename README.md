@@ -37,7 +37,7 @@ sharing a binary.
 
 | Option | Status | What to do |
 |---|---|---|
-| Local Apple Silicon macOS app | **Available now** | Run `scripts/build-macos-app.sh`; the ROM-free app prompts for your supported ROM on first launch. |
+| Local Apple Silicon macOS app | **Available now** | With [PadMint](https://github.com/chrissotraidis/padmint/releases/latest) 0.5.5 or newer, choose Super Smash Bros., then **This Mac** (one-time setup: `brew install dylibbundler`); or run `scripts/build-macos-app.sh` yourself. The ROM-free app prompts for your supported ROM on first launch. |
 | iPhone/iPad Simulator | **Available now** | Run `scripts/build-ios-simulator.sh`, install with `simctl`, then select your ROM through Files. |
 | Make your own IPA with PadMint | **Available** | On an Apple Silicon Mac, [PadMint](https://github.com/chrissotraidis/padmint/releases/latest) builds BrawlerPad from this repository's latest release; see [Get started](#get-started). |
 | Signed physical-device build | **Locally verified** | A development-signed build installs and runs on registered iPhone and iPad hardware; public signing/distribution is not included. |
