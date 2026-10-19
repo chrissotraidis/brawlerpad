@@ -184,6 +184,17 @@
         ],
         "player": true,
         "note": "Brawler selects BRAWLERPAD_PYTHON first, then Homebrew python@3.11, then python3.11 on PATH. Install Python if none is available (for example: brew install python@3.11), and install Pillow into the selected interpreter with its -m pip install Pillow. For a virtual environment, use its Python without --user."
+      },
+      {
+        "name": "dylibbundler",
+        "version_args": [
+          "-h"
+        ],
+        "targets": [
+          "macos"
+        ],
+        "player": true,
+        "note": "The Mac app bundles its libraries with dylibbundler: brew install dylibbundler"
       }
     ]
   },
