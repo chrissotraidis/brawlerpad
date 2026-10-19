@@ -128,6 +128,9 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
 # SDL 2.32.10 UIKit scene startup: apps built with the iOS 27 SDK need it to open.
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0008-ios-uikit-scene-startup.patch"
+# spdlog 1.14.1 no longer compiles with Xcode 26's clang; the Mac build uses 1.16.0 like iOS.
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
+    "$BRAWLERPAD_ROOT/patches/libultraship/0009-mac-spdlog-1.16.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
     "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
