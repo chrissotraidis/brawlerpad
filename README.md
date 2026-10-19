@@ -374,3 +374,12 @@ Harbour Masters communities, Torch contributors, SDL contributors, and the
 HarkinianPad project. Each dependency retains its own license and rights
 boundary. BrawlerPad is not affiliated with or endorsed by Nintendo; all game
 names, copyrights, and trademarks belong to their respective owners.
+
+## Legal
+
+BrawlerPad is an unofficial, fan-made project. It is not affiliated with,
+endorsed by, or sponsored by Nintendo. Super Smash Bros. and related names and
+marks are trademarks of Nintendo (and their respective owners). This repository
+contains no game data, ROMs, or extracted assets. To use it, you need your own
+legally obtained copy of the game, and you build it yourself on your own
+machine. Please don't share game files or builds made from them.
