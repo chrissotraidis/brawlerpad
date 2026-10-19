@@ -62,8 +62,58 @@
     },
     "macos": {
       "hosts": {
-        "macos-arm64": "planned"
-      }
+        "macos-arm64": "experimental"
+      },
+      "output": "zip",
+      "check": "none",
+      "steps": [
+        {
+          "stage": "preflight",
+          "command": [
+            "/bin/bash",
+            "{repo}/scripts/check-repo-safety.sh"
+          ]
+        },
+        {
+          "stage": "dependencies",
+          "command": [
+            "/bin/bash",
+            "{repo}/scripts/clone-sources.sh"
+          ]
+        },
+        {
+          "stage": "compile",
+          "command": [
+            "/bin/bash",
+            "{repo}/scripts/build-macos-app.sh"
+          ],
+          "env": {
+            "JOBS": "{jobs}"
+          }
+        },
+        {
+          "stage": "sign",
+          "command": [
+            "/usr/bin/codesign",
+            "--force",
+            "--deep",
+            "--sign",
+            "-",
+            "{repo}/ref/BattleShip/dist/BrawlerPad.app"
+          ]
+        },
+        {
+          "stage": "package",
+          "command": [
+            "/usr/bin/ditto",
+            "-c",
+            "-k",
+            "--keepParent",
+            "{repo}/ref/BattleShip/dist/BrawlerPad.app",
+            "{output}"
+          ]
+        }
+      ]
     }
   },
   "requirements": {
