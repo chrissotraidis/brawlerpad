@@ -15,8 +15,6 @@
   <a href="https://discord.gg/xwHfUD2bxW"><img alt="Join the BrawlerPad Discord" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&amp;logoColor=white"></a>
 </p>
 
-![BrawlerPad running a four-player match with the iPad touch controller](docs/readme/brawlerpad-yoshi-battle.jpg)
-
 BrawlerPad is an unofficial native iOS, iPadOS, and Apple Silicon macOS
 porting project based on reverse-engineered game code. It is not a
 general-purpose Nintendo 64 emulator and is not affiliated with or endorsed by
@@ -242,34 +240,6 @@ altering the source document or leaving temporary copies behind.
 Every touch target feeds the same normalized SDL/ControlDeck player-one path as
 physical controllers. Opening the native menu cancels held input and removes the
 gameplay overlay until the menu closes.
-
-## Current screenshots
-
-<table>
-  <tr>
-    <td width="50%">
-      <img src="docs/readme/brawlerpad-character-select.jpg" alt="BrawlerPad character select with iPad touch controls">
-    </td>
-    <td width="50%">
-      <img src="docs/readme/brawlerpad-samus-link.jpg" alt="Samus versus Link on BrawlerPad">
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Ready to fight</strong><br>Character select remains fully visible behind the touch overlay.</td>
-    <td align="center"><strong>Native match flow</strong><br>Menus, stages, and gameplay run through the Apple-platform build.</td>
-  </tr>
-  <tr>
-    <td colspan="2">
-      <img src="docs/readme/brawlerpad-title.jpg" alt="BrawlerPad title screen with iPad touch controls">
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><strong>First launch to match</strong><br>The app guides local ROM setup, then keeps its controls close at hand.</td>
-  </tr>
-</table>
-
-The hero and gallery captures use locally supplied game data. No ROM, save, or
-playable archive is included in this repository.
 
 ## What works
 
