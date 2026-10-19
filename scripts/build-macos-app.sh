@@ -18,7 +18,7 @@ fi
 
 # The image tools need Python 3.11 with Pillow, the same one the iPhone build
 # uses (BRAWLERPAD_PYTHON, else Homebrew's python@3.11, else python3.11 on PATH).
-# BattleShip's packaging lets CMake find Python on PATH, so put that one first.
+# BattleShip's packaging lets CMake find Python itself, so point it at that one.
 PYTHON_EXECUTABLE="${BRAWLERPAD_PYTHON:-}"
 if [ -z "$PYTHON_EXECUTABLE" ]; then
     PYTHON_PREFIX="$(brew --prefix python@3.11 2>/dev/null || true)"
@@ -34,9 +34,12 @@ if [ -z "$PYTHON_EXECUTABLE" ] || ! "$PYTHON_EXECUTABLE" -c 'from PIL import Ima
 fi
 PYTHON_SHIM="$(mktemp -d "${TMPDIR:-/tmp}/brawlerpad-python.XXXXXX")"
 trap 'rm -rf "$PYTHON_SHIM"' EXIT
-ln -s "$PYTHON_EXECUTABLE" "$PYTHON_SHIM/python3"
-ln -s "$PYTHON_EXECUTABLE" "$PYTHON_SHIM/python3.11"
-export PATH="$PYTHON_SHIM:$PATH"
+mkdir "$PYTHON_SHIM/bin"
+ln -s "$PYTHON_EXECUTABLE" "$PYTHON_SHIM/bin/python3"
+ln -s "$PYTHON_EXECUTABLE" "$PYTHON_SHIM/bin/python3.11"
+export PATH="$PYTHON_SHIM/bin:$PATH"
+# CMake looks at framework Pythons first on macOS; Python3_ROOT_DIR comes before them.
+export Python3_ROOT_DIR="$PYTHON_SHIM"
 
 CI=1 \
 BRAWLERPAD_BRANDING=ON \
