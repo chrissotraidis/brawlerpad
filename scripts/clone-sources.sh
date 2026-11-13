@@ -185,6 +185,8 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0025-controller-reconnect-preview-2.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
     "$BRAWLERPAD_ROOT/patches/battleship/0026-ios-scene-manifest.patch"
+apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
+    "$BRAWLERPAD_ROOT/patches/battleship/0027-ios-touch-show-controls.patch"
 
 clone_at_pin "$HARKINIANPAD_REPO" "$BRAWLERPAD_REF/harkinianpad" "$HARKINIANPAD_PIN"
 

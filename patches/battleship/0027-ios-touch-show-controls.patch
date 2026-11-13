@@ -1,0 +1,125 @@
+diff --git a/port/gui/PortMenu.cpp b/port/gui/PortMenu.cpp
+index ea2eb68..c7e8515 100644
+--- a/port/gui/PortMenu.cpp
++++ b/port/gui/PortMenu.cpp
+@@ -1166,6 +1166,18 @@ void PortMenu::AddMenuSettings() {
+ 
+ #if defined(__IOS__)
+     AddWidget(path, "Touch Controls", WIDGET_SEPARATOR_TEXT);
++    AddWidget(path, "Show Touch Controls", WIDGET_BUTTON)
++        .RaceDisable(false)
++        .PreFunc([](WidgetInfo& info) { info.isHidden = !BrawlerPadTouchControlsHidden(); })
++        .Callback([](WidgetInfo&) {
++            CVarSetInteger("gSettings.BrawlerPad.TouchControls", 1);
++            CVarSetInteger("gSettings.BrawlerPad.HideTouchWithController", 0);
++            CVarSave();
++            BrawlerPadTouchControlsShow();
++        })
++        .Options(ButtonOptions().Tooltip(
++            "Closes the menu and shows the touch controls now, even with a controller connected. Turns off "
++            "Hide Touch Controls With Controller until you turn it back on."));
+     AddWidget(path, "Enable Touch Controls", WIDGET_CVAR_CHECKBOX)
+         .CVar("gSettings.BrawlerPad.TouchControls")
+         .RaceDisable(false)
+diff --git a/port/ios/brawlerpad_touch_controls.h b/port/ios/brawlerpad_touch_controls.h
+index 7645536..67d04e8 100644
+--- a/port/ios/brawlerpad_touch_controls.h
++++ b/port/ios/brawlerpad_touch_controls.h
+@@ -9,6 +9,8 @@ void BrawlerPadTouchControlsInitialize(void);
+ int BrawlerPadTouchControlsGetControllerInstanceId(void);
+ void BrawlerPadTouchControlsSetEnabled(int enabled);
+ void BrawlerPadTouchControlsSetHideWhenControllerConnected(int enabled);
++void BrawlerPadTouchControlsShow(void);
++int BrawlerPadTouchControlsHidden(void);
+ void BrawlerPadTouchControlsSetOpacity(float opacity);
+ void BrawlerPadTouchControlsBeginEditing(void);
+ void BrawlerPadTouchControlsFrameUpdate(int menuVisible, int gamePaused);
+diff --git a/port/ios/brawlerpad_touch_controls.mm b/port/ios/brawlerpad_touch_controls.mm
+index 84c931f..8d5adea 100644
+--- a/port/ios/brawlerpad_touch_controls.mm
++++ b/port/ios/brawlerpad_touch_controls.mm
+@@ -4,6 +4,7 @@
+ #import <QuartzCore/QuartzCore.h>
+ 
+ #include "brawlerpad_touch_controls.h"
++#include "brawlerpad_touch_visibility.h"
+ 
+ #include <SDL2/SDL.h>
+ #include <algorithm>
+@@ -166,6 +167,9 @@ typedef NS_ENUM(NSInteger, BPInputKind) {
+ }
+ - (void)setPressed:(BOOL)pressed {
+     if (self.inputPressed == pressed || self.layoutEditing) return;
++    // A finger that stays down after the overlay is removed must not press
++    // an invisible control again.
++    if (pressed && self.window == nil) return;
+     self.inputPressed = pressed;
+     self.backgroundColor = pressed ? self.pressedColor : self.idleColor;
+     const NSUInteger generation = ++self.inputGeneration;
+@@ -656,6 +660,11 @@ UIWindow* ActiveWindow() {
+ 
+ void QueueMenuToggle() { sMenuTogglePending.store(true); }
+ 
++bool GameplayControlsVisible() {
++    return BrawlerPadTouch::GameplayControlsVisible({ sEnabled.load(), sHideForController.load() },
++                                                    sPhysicalControllerConnected.load());
++}
++
+ void InstallMenuButton(UIWindow* window) {
+     if (!sMenuButton) {
+         sMenuButton=[UIButton buttonWithType:UIButtonTypeSystem]; [sMenuButton setTitle:@"•••" forState:UIControlStateNormal];
+@@ -687,7 +696,7 @@ void ApplyState() {
+     UIWindow* window=ActiveWindow();
+     if (!window) { dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_MSEC*200),dispatch_get_main_queue(),^{ ApplyState(); }); return; }
+     InstallMenuButton(window);
+-    BOOL gameplayVisible=sEnabled.load() && !sMenuVisible.load() && !(sHideForController.load() && sPhysicalControllerConnected.load());
++    BOOL gameplayVisible=GameplayControlsVisible() && !sMenuVisible.load();
+     SDL_Log("[BrawlerPad] touch state enabled=%d menu=%d hideWithController=%d physical=%d gameplay=%d editor=%d",
+             sEnabled.load(), sMenuVisible.load(), sHideForController.load(),
+             sPhysicalControllerConnected.load(), gameplayVisible, sEditorRequested);
+@@ -719,6 +728,17 @@ void BrawlerPadTouchControlsSetEnabled(int enabled) {
+ void BrawlerPadTouchControlsSetHideWhenControllerConnected(int enabled) {
+     sHideForController.store(enabled!=0); dispatch_async(dispatch_get_main_queue(),^{ ApplyState(); });
+ }
++void BrawlerPadTouchControlsShow(void) {
++    const BrawlerPadTouch::Preferences preferences =
++        BrawlerPadTouch::ShowTouchControls({ sEnabled.load(), sHideForController.load() });
++    sEnabled.store(preferences.touchControls);
++    sHideForController.store(preferences.hideWithController);
++    SDL_Log("[BrawlerPad] touch controls shown; hide with controller turned off");
++    // Close the menu so the restored controls are usable at once; the menu
++    // button and the same player-1 input path stay as they were.
++    dispatch_async(dispatch_get_main_queue(),^{ InstallLifecycleObservers(); if (sMenuVisible.load()) QueueMenuToggle(); ApplyState(); });
++}
++int BrawlerPadTouchControlsHidden(void) { return GameplayControlsVisible() ? 0 : 1; }
+ void BrawlerPadTouchControlsSetOpacity(float opacity) {
+     sOpacity.store(std::clamp(opacity,.25f,1.0f)); dispatch_async(dispatch_get_main_queue(),^{ ApplyState(); });
+ }
+diff --git a/port/ios/brawlerpad_touch_visibility.h b/port/ios/brawlerpad_touch_visibility.h
+new file mode 100644
+index 0000000..98dcae1
+--- /dev/null
++++ b/port/ios/brawlerpad_touch_visibility.h
+@@ -0,0 +1,22 @@
++#pragma once
++
++// Touch-control visibility shared by the UIKit overlay, the settings menu and
++// BrawlerPad's host tests. Physical-controller detection stays in the overlay.
++namespace BrawlerPadTouch {
++
++struct Preferences {
++    bool touchControls = true;      // "Enable Touch Controls"
++    bool hideWithController = true; // "Hide Touch Controls With Controller"
++};
++
++// "Show Touch Controls" restores the controls and turns auto-hide off until
++// the player turns it back on.
++constexpr Preferences ShowTouchControls(Preferences) {
++    return { true, false };
++}
++
++constexpr bool GameplayControlsVisible(const Preferences& preferences, bool physicalControllerConnected) {
++    return preferences.touchControls && !(preferences.hideWithController && physicalControllerConnected);
++}
++
++} // namespace BrawlerPadTouch

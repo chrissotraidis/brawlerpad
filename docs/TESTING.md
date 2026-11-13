@@ -3,6 +3,20 @@
 Every platform claim requires a build, install where applicable, launch, and
 observable runtime result. Compilation alone is not a pass.
 
+## Touch visibility
+
+After `scripts/clone-sources.sh`, run:
+
+```sh
+tests/test-touch-visibility.sh
+```
+
+It checks the shared visibility decision: by default a physical controller
+hides the gameplay controls, **Hide Touch Controls With Controller** keeps them,
+and **Show Touch Controls** restores them with the controller still connected
+while turning that preference off. Hiding, releasing held input and the menu
+button remain device checks.
+
 ## Preview 2 controller reconciliation
 
 The actual input backend is SDL2 managed by libultraship's ControlDeck. Run the
