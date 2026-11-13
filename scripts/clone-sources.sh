@@ -131,6 +131,10 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
 # spdlog 1.14.1 no longer compiles with Xcode 26's clang; the Mac build uses 1.16.0 like iOS.
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0009-mac-spdlog-1.16.patch"
+# SDL2 UIKit window ownership (chrissotraidis/SDL 090b0c5a): SDL's window follows
+# the scene that started SDL, including windowed iPad scenes.
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
+    "$BRAWLERPAD_ROOT/patches/libultraship/0010-ios-sdl2-uikit-window-ownership.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
     "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
