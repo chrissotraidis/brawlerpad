@@ -845,7 +845,7 @@ new file mode 100644
 index 0000000..e671b69
 --- /dev/null
 +++ b/ios/Info.plist.in
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,50 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 +<plist version="1.0">
@@ -880,6 +880,8 @@ index 0000000..e671b69
 +    <dict/>
 +    <key>UIRequiresFullScreen</key>
 +    <true/>
++    <key>UIRequiresFullScreenIgnoredStartingWithVersion</key>
++    <string>26</string>
 +    <key>UISupportedInterfaceOrientations</key>
 +    <array>
 +        <string>UIInterfaceOrientationLandscapeLeft</string>
@@ -887,6 +889,8 @@ index 0000000..e671b69
 +    </array>
 +    <key>UISupportedInterfaceOrientations~ipad</key>
 +    <array>
++        <string>UIInterfaceOrientationPortrait</string>
++        <string>UIInterfaceOrientationPortraitUpsideDown</string>
 +        <string>UIInterfaceOrientationLandscapeLeft</string>
 +        <string>UIInterfaceOrientationLandscapeRight</string>
 +    </array>
