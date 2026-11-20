@@ -135,6 +135,10 @@ apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
 # the scene that started SDL, including windowed iPad scenes.
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
     "$BRAWLERPAD_ROOT/patches/libultraship/0010-ios-sdl2-uikit-window-ownership.patch"
+# iOS windows are already full-screen; switching SDL display modes used the
+# iPad's own mode and left an external display (a TV) black. As in HarkinianPad.
+apply_patch_once "$BRAWLERPAD_REF/BattleShip/libultraship" \
+    "$BRAWLERPAD_ROOT/patches/libultraship/0011-ios-skip-display-mode-fullscreen.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip/torch" \
     "$BRAWLERPAD_ROOT/patches/torch/0001-preserve-caller-compiler-flags.patch"
 apply_patch_once "$BRAWLERPAD_REF/BattleShip" \
